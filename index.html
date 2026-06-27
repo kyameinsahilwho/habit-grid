@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect x=%2210%22 y=%2210%22 width=%2280%22 height=%2280%22 rx=%2220%22 fill=%22%2327272a%22/><rect x=%2225%22 y=%2225%22 width=%2220%22 height=%2220%22 rx=%226%22 fill=%22%23ffffff%22/><rect x=%2255%22 y=%2225%22 width=%2220%22 height=%2220%22 rx=%226%22 fill=%22%23ffffff%22/><rect x=%2225%22 y=%2255%22 width=%2220%22 height=%2220%22 rx=%226%22 fill=%22%23ffffff%22/><rect x=%2255%22 y=%2255%22 width=%2220%22 height=%2220%22 rx=%226%22 fill=%22%236366f1%22/></svg>" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HabitGrid | Premium Habit & Journal Sheets Designer</title>
+    <meta name="description" content="Design beautiful, custom habit tracker grids and export them as print-ready PDFs. Choose months, weeks, or custom day ranges.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Abril+Fatface&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Controls -->
+        <aside class="sidebar">
+            <header class="sidebar-header">
+                <div class="logo">
+                    <i data-lucide="CheckSquare" class="logo-icon-svg" style="width: 22px; height: 22px; color: var(--accent); stroke-width: 2.5px;"></i>
+                    <h1>HabitGrid</h1>
+                </div>
+                <p class="tagline">Create print-ready beautiful habit sheets</p>
+            </header>
+
+            <div class="sidebar-scroll">
+                <!-- 1. Habits & Questions Section -->
+                <div class="settings-section">
+                    <h2 class="section-title">1. Habits & Questions</h2>
+                    <div class="add-habit-form">
+                        <div class="input-group">
+                            <input type="text" id="habit-name-input" placeholder="Workout, Drink water, Did I feel happy?..." maxlength="30">
+                            <button type="button" id="icon-trigger" class="picker-btn" style="margin-right: 6px;" title="Choose icon">
+                                <i data-lucide="Droplet" id="selected-icon-preview" style="width:18px; height:18px;"></i>
+                            </button>
+                        </div>
+                        <button type="button" id="add-habit-btn" class="btn btn-primary">Add Item</button>
+                        
+                        <!-- Icon Picker Popover -->
+                        <div id="icon-popover" class="icon-popover hidden">
+                            <div class="icon-list">
+                                <span data-icon="Droplet" title="Water"><i data-lucide="Droplet"></i></span>
+                                <span data-icon="Dumbbell" title="Workout"><i data-lucide="Dumbbell"></i></span>
+                                <span data-icon="BookOpen" title="Read"><i data-lucide="BookOpen"></i></span>
+                                <span data-icon="Brain" title="Meditation"><i data-lucide="Brain"></i></span>
+                                <span data-icon="Apple" title="Diet"><i data-lucide="Apple"></i></span>
+                                <span data-icon="Camera" title="Progress Pic"><i data-lucide="Camera"></i></span>
+                                <span data-icon="Bed" title="Sleep"><i data-lucide="Bed"></i></span>
+                                <span data-icon="Flame" title="Streak/Intensity"><i data-lucide="Flame"></i></span>
+                                <span data-icon="Smile" title="Mood"><i data-lucide="Smile"></i></span>
+                                <span data-icon="Coffee" title="Coffee/Tea"><i data-lucide="Coffee"></i></span>
+                                <span data-icon="DollarSign" title="Savings/Money"><i data-lucide="DollarSign"></i></span>
+                                <span data-icon="Laptop" title="Work/Coding"><i data-lucide="Laptop"></i></span>
+                                <span data-icon="Heart" title="Self-Care"><i data-lucide="Heart"></i></span>
+                                <span data-icon="Bike" title="Cardio/Bike"><i data-lucide="Bike"></i></span>
+                                <span data-icon="Sparkles" title="Clean/Beauty"><i data-lucide="Sparkles"></i></span>
+                                <span data-icon="Music" title="Instrument/Music"><i data-lucide="Music"></i></span>
+                                <span data-icon="Paintbrush" title="Creativity/Art"><i data-lucide="Paintbrush"></i></span>
+                                <span data-icon="Scale" title="Weight"><i data-lucide="Scale"></i></span>
+                                <span data-icon="Ban" title="Quit Bad Habit"><i data-lucide="Ban"></i></span>
+                                <span data-icon="CheckSquare" title="Checklist"><i data-lucide="CheckSquare"></i></span>
+                                <span data-icon="Activity" title="Health"><i data-lucide="Activity"></i></span>
+                                <span data-icon="Compass" title="Focus"><i data-lucide="Compass"></i></span>
+                                <span data-icon="PenTool" title="Journaling"><i data-lucide="PenTool"></i></span>
+                                <span data-icon="GraduationCap" title="Learning"><i data-lucide="GraduationCap"></i></span>
+                                <span data-icon="Sun" title="Morning Routine"><i data-lucide="Sun"></i></span>
+                                <span data-icon="Moon" title="Night Routine"><i data-lucide="Moon"></i></span>
+                                <span data-icon="SmilePlus" title="Gratitude"><i data-lucide="SmilePlus"></i></span>
+                                <span data-icon="Utensils" title="Meal Prep"><i data-lucide="Utensils"></i></span>
+                                <span data-icon="Trees" title="Outdoors/Nature"><i data-lucide="Trees"></i></span>
+                            </div>
+                        </div>
+                    </div>
+ 
+                    <div class="habit-list-container">
+                        <h3>Your Habits & Questions <span class="badge" id="habit-count">0</span></h3>
+                        <div id="habit-list" class="habit-list">
+                            <!-- Habits dynamically inserted here -->
+                        </div>
+                        <p class="drag-hint" id="drag-hint"> Drag to reorder items</p>
+                    </div>
+                </div>
+
+                <!-- 2. Timeframe Section -->
+                <div class="settings-section">
+                    <h2 class="section-title">2. Timeframe</h2>
+                    <div class="form-group">
+                        <label>Period Mode</label>
+                        <div class="toggle-group" id="period-mode-toggle">
+                            <button class="toggle-btn active" data-mode="month">Month</button>
+                            <button class="toggle-btn" data-mode="weeks">Weeks</button>
+                            <button class="toggle-btn" data-mode="days">Days</button>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic timeframe options based on mode -->
+                    <div id="timeframe-options">
+                        <!-- Month Mode Config -->
+                        <div id="config-month" class="time-config-panel">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="select-month">Month</label>
+                                    <select id="select-month">
+                                        <option value="0">January</option>
+                                        <option value="1">February</option>
+                                        <option value="2">March</option>
+                                        <option value="3">April</option>
+                                        <option value="4">May</option>
+                                        <option value="5">June</option>
+                                        <option value="6">July</option>
+                                        <option value="7">August</option>
+                                        <option value="8">September</option>
+                                        <option value="9">October</option>
+                                        <option value="10">November</option>
+                                        <option value="11" selected>December</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="select-month-year">Year</label>
+                                    <input type="number" id="select-month-year" value="2026" min="2020" max="2100">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Weeks Mode Config -->
+                        <div id="config-weeks" class="time-config-panel hidden">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="select-week-start">Start Date</label>
+                                    <input type="date" id="select-week-start" value="2026-06-29">
+                                </div>
+                                <div class="form-group">
+                                    <label for="select-weeks-count">Number of Weeks</label>
+                                    <select id="select-weeks-count">
+                                        <option value="1">1 Week</option>
+                                        <option value="2">2 Weeks</option>
+                                        <option value="3">3 Weeks</option>
+                                        <option value="4" selected>4 Weeks</option>
+                                        <option value="5">5 Weeks</option>
+                                        <option value="6">6 Weeks</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Days Mode Config -->
+                        <div id="config-days" class="time-config-panel hidden">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="select-days-start">Start Date</label>
+                                    <input type="date" id="select-days-start" value="2026-06-28">
+                                </div>
+                                <div class="form-group">
+                                    <label for="select-days-count">Number of Days</label>
+                                    <input type="number" id="select-days-count" value="75" min="5" max="150">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Design & Typography Section -->
+                <div class="settings-section">
+                    <h2 class="section-title">3. Design & Typography</h2>
+                    
+                    <div class="form-group">
+                        <label for="grid-title">Tracker Title</label>
+                        <input type="text" id="grid-title" value="Personal Habit Tracker" placeholder="e.g., 75 HARD, June Tracker...">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="title-font">Title Font Style</label>
+                            <select id="title-font">
+                                <option value="outfit" selected>Outfit (Modern Sans)</option>
+                                <option value="playfair">Playfair (Elegant Serif)</option>
+                                <option value="abril">Abril Fatface (Retro Serif)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="cell-shape">Cell Shape</label>
+                            <select id="cell-shape">
+                                <option value="square">Square (Retro)</option>
+                                <option value="rounded" selected>Rounded Square</option>
+                                <option value="circle">Circle</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="columns-per-row">Segment Grid columns</label>
+                            <select id="columns-per-row">
+                                <option value="0">No Split (Single Row)</option>
+                                <option value="10">Split every 10 days</option>
+                                <option value="15">Split every 15 days</option>
+                                <option value="25" selected>Split every 25 days (75 Hard Style)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="theme-preset">Color Theme</label>
+                            <select id="theme-preset">
+                                <option value="sand-navy">Retro Sand & Navy</option>
+                                <option value="violet">Midnight Violet</option>
+                                <option value="emerald">Emerald Forest</option>
+                                <option value="sunset">Sunset Glow</option>
+                                <option value="ocean">Deep Ocean</option>
+                                <option value="lavender">Wild Lavender</option>
+                                <option value="monochrome" selected>Minimal Charcoal</option>
+                                <option value="custom">-- Custom Colors --</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Custom Print Palette controls -->
+                    <div id="custom-palette-controls" class="hidden">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="pdf-bg-color">Print Background</label>
+                                <input type="color" id="pdf-bg-color" value="#dfbca0">
+                            </div>
+                            <div class="form-group">
+                                <label for="pdf-text-color">Print Text & Grid</label>
+                                <input type="color" id="pdf-text-color" value="#0f2d59">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="checkbox-options">
+                        <label class="checkbox-container">
+                            <input type="checkbox" id="show-start-date-box" checked>
+                            <span class="checkmark"></span>
+                            Include Start Date Box
+                        </label>
+                        <label class="checkbox-container">
+                            <input type="checkbox" id="show-weekdays" checked>
+                            <span class="checkmark"></span>
+                            Show Weekdays Header
+                        </label>
+                        <label class="checkbox-container">
+                            <input type="checkbox" id="show-day-numbers" checked>
+                            <span class="checkmark"></span>
+                            Show Day Numbers
+                        </label>
+                        <label class="checkbox-container">
+                            <input type="checkbox" id="show-notes-section" checked>
+                            <span class="checkmark"></span>
+                            Include Notes Area
+                        </label>
+                        <label class="checkbox-container">
+                            <input type="checkbox" id="show-status-legend">
+                            <span class="checkmark"></span>
+                            Include Color Legend
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 4. Page Setup Section -->
+                <div class="settings-section">
+                    <h2 class="section-title">4. Page Setup</h2>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="page-size">Page Size</label>
+                            <select id="page-size">
+                                <option value="a4" selected>A4</option>
+                                <option value="letter">Letter</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="page-orientation">Orientation</label>
+                            <select id="page-orientation">
+                                <option value="portrait" selected>Portrait (Best for stacked lists)</option>
+                                <option value="landscape">Landscape</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-actions">
+                <button type="button" id="export-pdf-btn" class="btn btn-accent btn-large">
+                    <span class="btn-icon">📥</span> Export PDF
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Live Preview Area -->
+        <main class="preview-area">
+            <div class="preview-header">
+                <h2>Live Print Preview</h2>
+                <p>What you see is what gets exported. Check details before downloading.</p>
+            </div>
+
+            <div class="preview-viewport-wrapper">
+                <div id="pdf-pages-container" class="pdf-pages-container">
+                    <!-- Pages dynamically rendered here -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Script loading -->
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>

@@ -405,8 +405,6 @@ function renderDocPages() {
     const page1HeaderHeight = 140;
     const miniHeaderHeight = 50;
 
-    // Estimate footer height
-    let estimatedFooterHeight = 0;
     // Estimate footer height (accurately matches rendered DOM heights)
     let estimatedFooterHeight = 0;
     if (config.showNotesSection || config.showStatusLegend) {

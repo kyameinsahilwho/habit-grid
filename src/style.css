@@ -703,19 +703,19 @@ input[type="color"]::-webkit-color-swatch {
 
 /* Typography styles matching preferences */
 .pdf-page-container.font-style-outfit {
-    --sheet-font-family: 'Outfit', sans-serif;
+    --title-font-family: 'Outfit', sans-serif;
 }
 .pdf-page-container.font-style-playfair {
-    --sheet-font-family: 'Playfair Display', serif;
+    --title-font-family: 'Playfair Display', serif;
 }
 .pdf-page-container.font-style-abril {
-    --sheet-font-family: 'Abril Fatface', serif;
+    --title-font-family: 'Abril Fatface', serif;
 }
 
 .pdf-page-container {
     background-color: var(--pdf-page-bg, #ffffff) !important;
     color: var(--pdf-page-text, #18181b) !important;
-    font-family: var(--sheet-font-family, 'Outfit', sans-serif);
+    font-family: 'Outfit', sans-serif;
 }
 
 /* Page inner layout */
@@ -743,7 +743,7 @@ input[type="color"]::-webkit-color-swatch {
 }
 
 .pdf-title-mini {
-    font-family: var(--sheet-font-family, 'Outfit', sans-serif);
+    font-family: var(--title-font-family, 'Outfit', sans-serif);
     font-size: 14px;
     font-weight: 800;
     text-transform: uppercase;
@@ -751,7 +751,7 @@ input[type="color"]::-webkit-color-swatch {
 }
 
 .page-num-badge {
-    font-family: var(--sheet-font-family, 'Outfit', sans-serif);
+    font-family: 'Outfit', sans-serif;
     font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
@@ -759,7 +759,7 @@ input[type="color"]::-webkit-color-swatch {
 }
 
 .pdf-title {
-    font-family: var(--sheet-font-family, 'Outfit', sans-serif);
+    font-family: var(--title-font-family, 'Outfit', sans-serif);
     font-size: 42px;
     font-weight: 800;
     letter-spacing: -0.02em;
@@ -770,7 +770,7 @@ input[type="color"]::-webkit-color-swatch {
     font-size: 15px;
     font-weight: 500;
     margin-top: 6px;
-    font-family: var(--sheet-font-family, 'Outfit', sans-serif);
+    font-family: 'Outfit', sans-serif;
     text-transform: uppercase;
     letter-spacing: 0.1em;
 }

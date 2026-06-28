@@ -15,7 +15,8 @@ export default async function handler(req, res) {
   let browser = null;
 
   try {
-    const isLocal = process.env.NODE_ENV === 'development' || !process.env.AWS_EXECUTION_ENV;
+    // Only run local launching fallback on non-Linux development environments
+    const isLocal = process.env.NODE_ENV === 'development' || process.platform !== 'linux';
 
     if (isLocal) {
       try {
@@ -38,11 +39,21 @@ export default async function handler(req, res) {
         }
       }
     } else {
-      browser = await playwright.launch({
-        args: chromium.args,
-        executablePath: await chromium.executablePath(),
-        headless: chromium.headless,
-      });
+      // Production Linux Server (Vercel/Lambda/VPS): Try sparticuz chromium first
+      try {
+        const execPath = await chromium.executablePath();
+        browser = await playwright.launch({
+          args: chromium.args,
+          executablePath: execPath,
+          headless: chromium.headless,
+        });
+      } catch (err) {
+        console.warn('Failed to launch @sparticuz/chromium, falling back to standard playwright launch...', err);
+        // Fallback for VPS/container environments where standard Playwright browsers are installed
+        browser = await playwright.launch({
+          headless: true,
+        });
+      }
     }
 
     const context = await browser.newContext();

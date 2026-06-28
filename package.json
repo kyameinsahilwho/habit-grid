@@ -12,8 +12,10 @@
     "vite": "^8.1.0"
   },
   "dependencies": {
+    "@sparticuz/chromium": "^147.0.0",
     "express": "^5.2.1",
     "lucide": "^1.21.0",
+    "playwright-core": "^1.61.1",
     "sortablejs": "^1.15.7"
   }
 }

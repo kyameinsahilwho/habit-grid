@@ -228,6 +228,12 @@ select:focus {
     transition: all 0.2s ease;
 }
 
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
 .btn-primary {
     background-color: var(--accent);
     color: white;

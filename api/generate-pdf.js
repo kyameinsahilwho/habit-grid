@@ -1,5 +1,5 @@
 import chromium from '@sparticuz/chromium';
-import puppeteer from 'puppeteer-core';
+import { chromium as playwright } from 'playwright-core';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -15,20 +15,39 @@ export default async function handler(req, res) {
   let browser = null;
 
   try {
-    // Basic launch options for Vercel
-    browser = await puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath(),
-      headless: chromium.headless,
-      ignoreHTTPSErrors: true,
-    });
+    const isLocal = process.env.NODE_ENV === 'development' || !process.env.AWS_EXECUTION_ENV;
 
-    const page = await browser.newPage();
+    if (isLocal) {
+      try {
+        browser = await playwright.launch({
+          headless: true,
+          channel: 'chrome',
+        });
+      } catch (err) {
+        console.warn('Failed to launch Google Chrome, trying Microsoft Edge...', err);
+        try {
+          browser = await playwright.launch({
+            headless: true,
+            channel: 'msedge',
+          });
+        } catch (err2) {
+          console.warn('Failed to launch Microsoft Edge, trying default launch...', err2);
+          browser = await playwright.launch({
+            headless: true,
+          });
+        }
+      }
+    } else {
+      browser = await playwright.launch({
+        args: chromium.args,
+        executablePath: await chromium.executablePath(),
+        headless: chromium.headless,
+      });
+    }
 
-    // Reconstruct a full HTML document if only a fragment is provided
-    // but the frontend is expected to send the full needed HTML.
-    // If it's just the container, we wrap it.
+    const context = await browser.newContext();
+    const page = await context.newPage();
+
     const fullHtml = `
       <!DOCTYPE html>
       <html>
@@ -44,7 +63,7 @@ export default async function handler(req, res) {
       </html>
     `;
 
-    await page.setContent(fullHtml, { waitUntil: 'networkidle0' });
+    await page.setContent(fullHtml, { waitUntil: 'networkidle' });
 
     const pdf = await page.pdf({
       format: pageSize,

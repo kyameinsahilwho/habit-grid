@@ -1210,36 +1210,111 @@ function hexToRgb(hex) {
     } : { r: 0, g: 0, b: 0 };
 }
 
+function getActiveCSS() {
+    let cssText = '';
+    for (const sheet of document.styleSheets) {
+        try {
+            if (sheet.href && !sheet.href.startsWith(window.location.origin)) {
+                continue;
+            }
+            const rules = sheet.cssRules || sheet.rules;
+            if (rules) {
+                for (const rule of rules) {
+                    cssText += rule.cssText + '\n';
+                }
+            }
+        } catch (e) {
+            console.warn('Could not read style rules from stylesheet', sheet.href, e);
+        }
+    }
+    return cssText;
+}
+
 async function triggerPDFExport() {
+    const originalText = exportPdfBtn.innerHTML;
+    exportPdfBtn.disabled = true;
+    exportPdfBtn.innerHTML = '<span class="btn-icon">⏳</span> Generating PDF...';
+
     try {
         const isPortrait = config.pageOrientation === 'portrait';
         const orientation = isPortrait ? 'portrait' : 'landscape';
         const size = config.pageSize === 'a4' ? 'A4' : 'letter';
 
-        // Remove any existing dynamic print style
-        const existingStyle = document.getElementById('dynamic-print-style');
-        if (existingStyle) {
-            existingStyle.remove();
-        }
-
-        // Add dynamic @page rules for orientation & size
-        const styleEl = document.createElement('style');
-        styleEl.id = 'dynamic-print-style';
-        styleEl.innerHTML = `
-            @media print {
-                @page {
-                    size: ${size} ${orientation};
-                    margin: 0 !important;
-                }
+        // Add setup CSS so Playwright prints matching page dimensions
+        const pageSetupCss = `
+            @page {
+                size: ${size} ${orientation};
+                margin: 0 !important;
+            }
+            body {
+                margin: 0 !important;
+                padding: 0 !important;
+                background: transparent !important;
             }
         `;
-        document.head.appendChild(styleEl);
 
-        // Trigger native browser print dialog
-        window.print();
+        const activeCss = getActiveCSS() + '\n' + pageSetupCss;
+        const pagesContainer = document.getElementById('pdf-pages-container');
+        if (!pagesContainer) {
+            throw new Error('PDF pages container not found.');
+        }
+
+        const htmlPayload = `
+            <div id="pdf-pages-container" class="pdf-pages-container">
+                ${pagesContainer.innerHTML}
+            </div>
+        `;
+
+        const response = await fetch('/api/generate-pdf', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                html: htmlPayload,
+                css: activeCss,
+                pageSize: size,
+                orientation: orientation,
+                baseUrl: window.location.origin,
+            }),
+        });
+
+        if (!response.ok) {
+            let errorText = 'Unknown error';
+            try {
+                const errData = await response.json();
+                errorText = errData.details || errData.error || errorText;
+            } catch (_) {
+                errorText = await response.text();
+            }
+            throw new Error(`Failed to generate PDF: ${errorText}`);
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        
+        const cleanTitle = (config.gridTitle || 'habit-grid')
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/(^-|-$)/g, '');
+        const filename = `${cleanTitle || 'habit-tracker'}.pdf`;
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        
+        setTimeout(() => {
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }, 100);
     } catch (err) {
-        console.error('Print Error:', err);
-        alert('Error printing: ' + err.message);
+        console.error('PDF Export Error:', err);
+        alert('Error generating PDF: ' + err.message);
+    } finally {
+        exportPdfBtn.disabled = false;
+        exportPdfBtn.innerHTML = originalText;
     }
 }
 

@@ -2,39 +2,8 @@ import './style.css';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import Sortable from 'sortablejs';
-import {
-    createIcons,
-    Droplet,
-    Dumbbell,
-    BookOpen,
-    Brain,
-    Apple,
-    Camera,
-    Bed,
-    Flame,
-    Smile,
-    Coffee,
-    DollarSign,
-    Laptop,
-    Heart,
-    Bike,
-    Sparkles,
-    Music,
-    Paintbrush,
-    Scale,
-    Ban,
-    CheckSquare,
-    Activity,
-    Compass,
-    PenTool,
-    GraduationCap,
-    Sun,
-    Moon,
-    SmilePlus,
-    Utensils,
-    Trees,
-    X
-} from 'lucide';
+import * as lucide from 'lucide';
+const { createIcons } = lucide;
 
 // ==========================================
 // APP STATE & CONSTANTS
@@ -64,6 +33,10 @@ const config = {
     // Days Mode details
     startDaysDate: '2026-06-28',
     daysCount: 75,
+
+    // Range Mode details
+    startRangeDate: '2026-06-28',
+    endRangeDate: '2026-07-28',
 
     // General styles
     gridTitle: 'Personal Habit Tracker',
@@ -109,12 +82,45 @@ const MONTH_NAMES = [
 // Key: 'habitId-dateString', Value: boolean
 const checkedCells = new Map();
 
-const habitIcons = {
-    Droplet, Dumbbell, BookOpen, Brain, Apple, Camera, Bed, Flame, Smile, Coffee,
-    DollarSign, Laptop, Heart, Bike, Sparkles, Music, Paintbrush, Scale, Ban,
-    CheckSquare, Activity, Compass, PenTool, GraduationCap, Sun, Moon, SmilePlus,
-    Utensils, Trees, X
-};
+// Build the list of all available icons in Lucide (where value is an array of SVG elements)
+const habitIcons = {};
+Object.keys(lucide).forEach(key => {
+    if (Array.isArray(lucide[key])) {
+        habitIcons[key] = lucide[key];
+    }
+});
+
+const defaultIcons = [
+    { name: 'Droplet', title: 'Water' },
+    { name: 'Dumbbell', title: 'Workout' },
+    { name: 'BookOpen', title: 'Read' },
+    { name: 'Brain', title: 'Meditation' },
+    { name: 'Apple', title: 'Diet' },
+    { name: 'Camera', title: 'Progress Pic' },
+    { name: 'Bed', title: 'Sleep' },
+    { name: 'Flame', title: 'Streak/Intensity' },
+    { name: 'Smile', title: 'Mood' },
+    { name: 'Coffee', title: 'Coffee/Tea' },
+    { name: 'DollarSign', title: 'Savings/Money' },
+    { name: 'Laptop', title: 'Work/Coding' },
+    { name: 'Heart', title: 'Self-Care' },
+    { name: 'Bike', title: 'Cardio/Bike' },
+    { name: 'Sparkles', title: 'Clean/Beauty' },
+    { name: 'Music', title: 'Instrument/Music' },
+    { name: 'Paintbrush', title: 'Creativity/Art' },
+    { name: 'Scale', title: 'Weight' },
+    { name: 'Ban', title: 'Quit Bad Habit' },
+    { name: 'CheckSquare', title: 'Checklist' },
+    { name: 'Activity', title: 'Health' },
+    { name: 'Compass', title: 'Focus' },
+    { name: 'PenTool', title: 'Journaling' },
+    { name: 'GraduationCap', title: 'Learning' },
+    { name: 'Sun', title: 'Morning Routine' },
+    { name: 'Moon', title: 'Night Routine' },
+    { name: 'SmilePlus', title: 'Gratitude' },
+    { name: 'Utensils', title: 'Meal Prep' },
+    { name: 'Trees', title: 'Outdoors/Nature' }
+];
 
 function refreshLucideIcons() {
     createIcons({
@@ -129,6 +135,8 @@ const habitNameInput = document.getElementById('habit-name-input');
 const iconTrigger = document.getElementById('icon-trigger');
 const iconPopover = document.getElementById('icon-popover');
 const selectedIconPreview = document.getElementById('selected-icon-preview');
+const iconSearchInput = document.getElementById('icon-search-input');
+const iconPopoverList = document.getElementById('icon-popover-list');
 const addHabitBtn = document.getElementById('add-habit-btn');
 const habitList = document.getElementById('habit-list');
 const habitCountBadge = document.getElementById('habit-count');
@@ -138,6 +146,7 @@ const periodModeToggle = document.getElementById('period-mode-toggle');
 const configMonth = document.getElementById('config-month');
 const configWeeks = document.getElementById('config-weeks');
 const configDays = document.getElementById('config-days');
+const configRange = document.getElementById('config-range');
 
 const selectMonth = document.getElementById('select-month');
 const selectMonthYear = document.getElementById('select-month-year');
@@ -145,6 +154,8 @@ const selectWeekStart = document.getElementById('select-week-start');
 const selectWeeksCount = document.getElementById('select-weeks-count');
 const selectDaysStart = document.getElementById('select-days-start');
 const selectDaysCount = document.getElementById('select-days-count');
+const selectRangeStart = document.getElementById('select-range-start');
+const selectRangeEnd = document.getElementById('select-range-end');
 
 const gridTitleInput = document.getElementById('grid-title');
 const titleFontSelect = document.getElementById('title-font');
@@ -297,6 +308,15 @@ function getTimeframeSubtitleText() {
             const formatOptions = { month: 'short', day: 'numeric', year: 'numeric' };
             return `${start.toLocaleDateString('en-US', formatOptions)} - ${end.toLocaleDateString('en-US', formatOptions)}`;
         }
+    } else if (config.periodMode === 'range') {
+        const start = new Date(config.startRangeDate);
+        const end = new Date(config.endRangeDate);
+        const formatOptions = { month: 'short', day: 'numeric', year: 'numeric' };
+        if (end >= start) {
+            return `${start.toLocaleDateString('en-US', formatOptions)} - ${end.toLocaleDateString('en-US', formatOptions)}`;
+        } else {
+            return `${start.toLocaleDateString('en-US', formatOptions)}`;
+        }
     }
     return '';
 }
@@ -342,6 +362,30 @@ function getGridDates() {
     } else if (config.periodMode === 'days') {
         const start = new Date(config.startDaysDate);
         const totalDays = parseInt(config.daysCount) || 30;
+        for (let d = 0; d < totalDays; d++) {
+            const date = new Date(start);
+            date.setDate(start.getDate() + d);
+            dates.push({
+                dateString: date.toISOString().split('T')[0],
+                dayNumber: date.getDate(),
+                absoluteIndex: d + 1,
+                weekdayLabel: WEEKDAY_NAMES[date.getDay()],
+                isWeekend: date.getDay() === 0 || date.getDay() === 6
+            });
+        }
+    } else if (config.periodMode === 'range') {
+        const start = new Date(config.startRangeDate);
+        const end = new Date(config.endRangeDate);
+        // Reset hours to avoid timezone/daylight saving differences
+        start.setHours(0,0,0,0);
+        end.setHours(0,0,0,0);
+
+        let totalDays = 1;
+        if (end >= start) {
+            totalDays = Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1;
+        }
+        totalDays = Math.min(150, Math.max(1, totalDays)); // Limit to 150 days
+
         for (let d = 0; d < totalDays; d++) {
             const date = new Date(start);
             date.setDate(start.getDate() + d);
@@ -735,6 +779,64 @@ function varValue(varName) {
 }
 
 // ==========================================
+// ICON POPOVER RENDERING & SEARCH
+// ==========================================
+function renderIconPopover(query = '') {
+    if (!iconPopoverList) return;
+    iconPopoverList.innerHTML = '';
+    
+    let iconsToRender = [];
+    if (!query) {
+        iconsToRender = defaultIcons.map(item => ({ name: item.name, title: item.title }));
+    } else {
+        const lowerQuery = query.toLowerCase();
+        // Get all matching keys from habitIcons
+        const matchingNames = Object.keys(habitIcons).filter(name => 
+            name.toLowerCase().includes(lowerQuery)
+        );
+        // Sort alphabetically
+        matchingNames.sort();
+        // Limit to 100 results for performance
+        iconsToRender = matchingNames.slice(0, 100).map(name => ({ name, title: name }));
+    }
+
+    if (iconsToRender.length === 0) {
+        iconPopoverList.innerHTML = `<div style="grid-column: span 5; text-align: center; color: var(--text-muted); font-size: 11px; padding: 10px 0; width: 100%;">No icons found</div>`;
+        return;
+    }
+
+    iconsToRender.forEach(item => {
+        const span = document.createElement('span');
+        span.dataset.icon = item.name;
+        span.title = item.title;
+        span.innerHTML = `<i data-lucide="${item.name}"></i>`;
+        
+        span.addEventListener('click', () => {
+            selectedIconName = item.name;
+            const previewEl = document.getElementById('selected-icon-preview');
+            if (previewEl) {
+                const parent = previewEl.parentNode;
+                const newIcon = document.createElement('i');
+                newIcon.id = 'selected-icon-preview';
+                newIcon.style.width = '18px';
+                newIcon.style.height = '18px';
+                newIcon.setAttribute('data-lucide', item.name);
+                parent.replaceChild(newIcon, previewEl);
+            }
+            refreshLucideIcons();
+            iconPopover.classList.add('hidden');
+        });
+        
+        iconPopoverList.appendChild(span);
+    });
+
+    // Refresh icons inside the popover list
+    createIcons({
+        icons: habitIcons
+    });
+}
+
+// ==========================================
 // EVENT LISTENERS & UI LOGIC
 // ==========================================
 
@@ -742,10 +844,20 @@ function initUIControls() {
     // Re-adjust viewport scale when window resizes
     window.addEventListener('resize', adjustViewportScaling);
 
+    // Initial popover rendering (default state)
+    renderIconPopover('');
+
     // Icon Popover behavior
     iconTrigger.addEventListener('click', (e) => {
         e.stopPropagation();
+        const isHidden = iconPopover.classList.contains('hidden');
         iconPopover.classList.toggle('hidden');
+        if (isHidden) {
+            iconSearchInput.value = '';
+            renderIconPopover('');
+            // Focus with a slight timeout so layout renders
+            setTimeout(() => iconSearchInput.focus(), 50);
+        }
     });
 
     document.addEventListener('click', (e) => {
@@ -754,14 +866,8 @@ function initUIControls() {
         }
     });
 
-    iconPopover.querySelectorAll('.icon-list span').forEach(span => {
-        span.addEventListener('click', () => {
-            const icon = span.dataset.icon;
-            selectedIconName = icon;
-            selectedIconPreview.setAttribute('data-lucide', icon);
-            refreshLucideIcons();
-            iconPopover.classList.add('hidden');
-        });
+    iconSearchInput.addEventListener('input', (e) => {
+        renderIconPopover(e.target.value);
     });
 
     // Add habit click
@@ -793,10 +899,12 @@ function initUIControls() {
             configMonth.classList.add('hidden');
             configWeeks.classList.add('hidden');
             configDays.classList.add('hidden');
+            configRange.classList.add('hidden');
 
             if (mode === 'month') configMonth.classList.remove('hidden');
             if (mode === 'weeks') configWeeks.classList.remove('hidden');
             if (mode === 'days') configDays.classList.remove('hidden');
+            if (mode === 'range') configRange.classList.remove('hidden');
 
             renderAll();
         });
@@ -809,6 +917,8 @@ function initUIControls() {
     bindConfigSelect(selectWeeksCount, 'weeksCount', 'int');
     bindConfigSelect(selectDaysStart, 'startDaysDate', 'str');
     bindConfigSelect(selectDaysCount, 'daysCount', 'int');
+    bindConfigSelect(selectRangeStart, 'startRangeDate', 'str');
+    bindConfigSelect(selectRangeEnd, 'endRangeDate', 'str');
 
     bindConfigInput(gridTitleInput, 'gridTitle');
     bindConfigSelect(titleFontSelect, 'titleFont', 'str');
@@ -850,6 +960,28 @@ function initUIControls() {
     selectWeeksCount.value = config.weeksCount;
     selectDaysStart.value = config.startDaysDate;
     selectDaysCount.value = config.daysCount;
+    selectRangeStart.value = config.startRangeDate;
+    selectRangeEnd.value = config.endRangeDate;
+
+    // Set initial toggle mode button and config panels visibility
+    periodModeToggle.querySelectorAll('.toggle-btn').forEach(btn => {
+        if (btn.dataset.mode === config.periodMode) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+
+    configMonth.classList.add('hidden');
+    configWeeks.classList.add('hidden');
+    configDays.classList.add('hidden');
+    configRange.classList.add('hidden');
+
+    if (config.periodMode === 'month') configMonth.classList.remove('hidden');
+    if (config.periodMode === 'weeks') configWeeks.classList.remove('hidden');
+    if (config.periodMode === 'days') configDays.classList.remove('hidden');
+    if (config.periodMode === 'range') configRange.classList.remove('hidden');
+
     gridTitleInput.value = config.gridTitle;
     titleFontSelect.value = config.titleFont;
     cellShapeSelect.value = config.cellShape;

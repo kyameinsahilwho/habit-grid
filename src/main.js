@@ -1192,29 +1192,86 @@ function hexToRgb(hex) {
     } : { r: 0, g: 0, b: 0 };
 }
 
-function triggerPDFExport() {
-    // Inject dynamic @page print CSS rules to set size and orientation automatically
-    const styleEl = document.createElement('style');
-    styleEl.id = 'dynamic-print-styles';
-    const isPortrait = config.pageOrientation === 'portrait';
-    const orientation = isPortrait ? 'portrait' : 'landscape';
-    const size = config.pageSize === 'a4' ? 'A4' : 'letter';
+async function triggerPDFExport() {
+    const exportBtn = document.getElementById('export-pdf-btn');
+    const originalBtnText = exportBtn.innerHTML;
     
-    styleEl.innerHTML = `
-        @page {
-            size: ${size} ${orientation};
-            margin: 0 !important;
+    try {
+        exportBtn.disabled = true;
+        exportBtn.innerHTML = '<span class="btn-icon">⏳</span> Generating...';
+
+        // 1. Capture HTML content
+        // We clone it so we can clean it up for the PDF (e.g. remove scaling applied for preview)
+        const contentClone = pdfPagesContainer.cloneNode(true);
+
+        // Remove scale transforms that were only for the preview viewport
+        contentClone.querySelectorAll('.pdf-page-container').forEach(page => {
+            page.style.transform = 'none';
+            page.style.marginBottom = '0';
+        });
+
+        const html = contentClone.innerHTML;
+
+        // 2. Collect CSS
+        let css = '';
+        for (const sheet of document.styleSheets) {
+            try {
+                for (const rule of sheet.cssRules) {
+                    css += rule.cssText + '\n';
+                }
+            } catch (e) {
+                console.warn('Could not read stylesheet rules', e);
+            }
         }
-    `;
-    document.head.appendChild(styleEl);
 
-    // Call browser print dialog (e.g. Save as PDF)
-    window.print();
+        // Add dynamic @page rules
+        const isPortrait = config.pageOrientation === 'portrait';
+        const orientation = isPortrait ? 'portrait' : 'landscape';
+        const size = config.pageSize === 'a4' ? 'A4' : 'letter';
+        css += `
+            @page {
+                size: ${size} ${orientation};
+                margin: 0 !important;
+            }
+            body { margin: 0; padding: 0; }
+        `;
 
-    // Clean up style element afterward
-    setTimeout(() => {
-        styleEl.remove();
-    }, 1000);
+        // 3. Request PDF from backend
+        const response = await fetch('/api/generate-pdf', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                html,
+                css,
+                pageSize: size,
+                orientation: orientation,
+                baseUrl: window.location.origin
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.details || 'Failed to generate PDF');
+        }
+
+        // 4. Handle PDF download
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${config.gridTitle || 'habit-grid'}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+    } catch (err) {
+        console.error('PDF Export Error:', err);
+        alert('Error generating PDF: ' + err.message);
+    } finally {
+        exportBtn.disabled = false;
+        exportBtn.innerHTML = originalBtnText;
+    }
 }
 
 // Helper to escape HTML tags

@@ -4,7 +4,7 @@ import handler from './api/pdf.js';
 export default defineConfig({
   plugins: [
     {
-      name: 'playwright-pdf-generator-local',
+      name: 'puppeteer-pdf-generator-local',
       configureServer(server) {
         server.middlewares.use(async (req, res, next) => {
           if (req.url.startsWith('/api/pdf') && req.method === 'POST') {

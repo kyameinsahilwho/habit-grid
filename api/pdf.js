@@ -1,4 +1,4 @@
-import { chromium as playwright } from 'playwright-core';
+import puppeteer from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
 
 // Helper to parse JSON body from incoming stream (only used for local Connect middleware fallback)
@@ -37,7 +37,7 @@ export default async function handler(req, res) {
 
     const { bodyHtml, format, orientation, filename, cssContent } = body;
     
-    // Construct the fully styled standalone HTML document
+    // Construct the fully styled standalone HTML document (including missing Inter font)
     const fullHtml = `
       <!DOCTYPE html>
       <html>
@@ -45,7 +45,7 @@ export default async function handler(req, res) {
         <meta charset="utf-8">
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Abril+Fatface&display=swap" rel="stylesheet">
         <style>
           ${cssContent || ''}
           
@@ -92,11 +92,11 @@ export default async function handler(req, res) {
       };
     }
 
-    const browser = await playwright.launch(options);
-    const context = await browser.newContext();
-    const page = await context.newPage();
+    const browser = await puppeteer.launch(options);
+    const page = await browser.newPage();
     
-    await page.setContent(fullHtml, { waitUntil: 'load' });
+    // Wait for network idle to make sure all fonts, stylesheets, and SVGs are loaded
+    await page.setContent(fullHtml, { waitUntil: 'networkidle0' });
     
     // Call Chromium's print-to-PDF engine
     const pdfBuffer = await page.pdf({
@@ -113,7 +113,7 @@ export default async function handler(req, res) {
     res.setHeader('Content-Disposition', `attachment; filename="${filename || 'habit-tracker'}.pdf"`);
     res.end(pdfBuffer);
   } catch (err) {
-    console.error('Error generating PDF with Playwright Core:', err);
+    console.error('Error generating PDF with Puppeteer Core:', err);
     res.statusCode = 500;
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify({ error: err.message }));

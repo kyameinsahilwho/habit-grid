@@ -1240,8 +1240,7 @@ input[type="color"]::-webkit-color-swatch {
 /* Print specific media query style definitions */
 @media print {
     body, html {
-        background: #ffffff !important;
-        color: #000000 !important;
+        background: transparent !important;
         margin: 0 !important;
         padding: 0 !important;
         height: auto !important;
@@ -1301,8 +1300,6 @@ input[type="color"]::-webkit-color-swatch {
         page-break-after: always !important;
         break-after: page !important;
         transform: scale(1) !important;
-        width: 100% !important;
-        height: 100vh !important;
         box-sizing: border-box !important;
         position: relative !important;
         -webkit-print-color-adjust: exact !important;

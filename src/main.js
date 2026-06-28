@@ -586,6 +586,8 @@ function renderDocPages() {
         }
         pageCard.style.setProperty('--pdf-page-bg', pageBg);
         pageCard.style.setProperty('--pdf-page-text', pageText);
+        const themeAccent = config.themePreset === 'custom' ? config.pdfTextColor : (themeColorPresets[config.themePreset]?.text || '#6366f1');
+        pageCard.style.setProperty('--accent', themeAccent);
 
         // A. Render Header
         let headerHTML = '';

@@ -12,9 +12,10 @@
     "vite": "^8.1.0"
   },
   "dependencies": {
-    "html2canvas": "^1.4.1",
-    "jspdf": "^4.2.1",
+    "@sparticuz/chromium": "^149.0.0",
+    "express": "^5.2.1",
     "lucide": "^1.21.0",
+    "puppeteer-core": "^25.2.1",
     "sortablejs": "^1.15.7"
   }
 }

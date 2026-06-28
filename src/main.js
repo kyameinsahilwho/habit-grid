@@ -1195,86 +1195,35 @@ function hexToRgb(hex) {
 }
 
 async function triggerPDFExport() {
-    const exportBtn = document.getElementById('export-pdf-btn');
-    const originalBtnText = exportBtn.innerHTML;
-    
     try {
-        exportBtn.disabled = true;
-        exportBtn.innerHTML = '<span class="btn-icon">⏳</span> Generating...';
-
-        // 1. Capture HTML content
-        // We clone it so we can clean it up for the PDF (e.g. remove scaling applied for preview)
-        const contentClone = pdfPagesContainer.cloneNode(true);
-
-        // Remove scale transforms that were only for the preview viewport
-        contentClone.querySelectorAll('.pdf-page-container').forEach(page => {
-            page.style.transform = 'none';
-            page.style.marginBottom = '0';
-        });
-
-        const html = contentClone.innerHTML;
-
-        // 2. Collect CSS
-        let css = '';
-        for (const sheet of document.styleSheets) {
-            try {
-                for (const rule of sheet.cssRules) {
-                    css += rule.cssText + '\n';
-                }
-            } catch (e) {
-                console.warn('Could not read stylesheet rules', e);
-            }
-        }
-
-        // Add dynamic @page rules
         const isPortrait = config.pageOrientation === 'portrait';
         const orientation = isPortrait ? 'portrait' : 'landscape';
         const size = config.pageSize === 'a4' ? 'A4' : 'letter';
-        css += `
-            @page {
-                size: ${size} ${orientation};
-                margin: 0 !important;
-            }
-            body { margin: 0; padding: 0; }
-        `;
 
-        const filename = (config.gridTitle || 'habit-tracker').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-
-        // 3. Request PDF from serverless endpoint
-        const response = await fetch('/api/pdf', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                bodyHtml: html,
-                cssContent: css,
-                format: size.toLowerCase(),
-                orientation: orientation,
-                filename: filename
-            })
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.error || 'Failed to generate PDF');
+        // Remove any existing dynamic print style
+        const existingStyle = document.getElementById('dynamic-print-style');
+        if (existingStyle) {
+            existingStyle.remove();
         }
 
-        // 4. Handle PDF download
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${filename}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
+        // Add dynamic @page rules for orientation & size
+        const styleEl = document.createElement('style');
+        styleEl.id = 'dynamic-print-style';
+        styleEl.innerHTML = `
+            @media print {
+                @page {
+                    size: ${size} ${orientation};
+                    margin: 0 !important;
+                }
+            }
+        `;
+        document.head.appendChild(styleEl);
 
+        // Trigger native browser print dialog
+        window.print();
     } catch (err) {
-        console.error('PDF Export Error:', err);
-        alert('Error generating PDF: ' + err.message);
-    } finally {
-        exportBtn.disabled = false;
-        exportBtn.innerHTML = originalBtnText;
+        console.error('Print Error:', err);
+        alert('Error printing: ' + err.message);
     }
 }
 

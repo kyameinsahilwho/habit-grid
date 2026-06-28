@@ -1228,6 +1228,15 @@ input[type="color"]::-webkit-color-swatch {
     }
 }
 
+
+.cont-label {
+    font-size: 8px;
+    font-weight: normal;
+    text-transform: lowercase;
+    opacity: 0.6;
+    margin-left: 4px;
+}
+
 /* Print specific media query style definitions */
 @media print {
     body, html {

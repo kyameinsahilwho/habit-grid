@@ -464,9 +464,9 @@ function renderDocPages() {
     // Compute cell dimensions dynamically
     const idealCellSize = Math.max(14, Math.min(36, Math.floor(availableGridWidth / maxCols) - 2));
 
-    // 2. Pagination split logic
+    // 2. Pagination split logic (handles splitting segments of a habit across pages if needed)
     const pages = [];
-    let currentPageHabits = [];
+    let currentPageItems = [];
     let currentPageHeight = 0;
 
     // Page height limit limits
@@ -486,44 +486,75 @@ function renderDocPages() {
         if (config.showNotesSection) estimatedFooterHeight += 130; // notes container + header
         if (config.showStatusLegend) estimatedFooterHeight += 60;  // legend container + header
     }
-    
+
     if (habits.length === 0) {
-        pages.push({ habits: [], isFirst: true, isLast: true });
+        pages.push({ items: [], isFirst: true, isLast: true });
     } else {
-        habits.forEach((habit, idx) => {
-            // Measure actual height of the habit block grid rows in DOM
-            const headerRowHeight = (config.showWeekdays || config.showDayNumbers)
-                ? ((config.showWeekdays && config.showDayNumbers) ? 28 : 18)
-                : 0;
-            const segmentHeight = headerRowHeight + idealCellSize + 12; // cell size + row gaps
-            const habitHeight = 28 + segments.length * segmentHeight;
+        const headerRowHeight = (config.showWeekdays || config.showDayNumbers)
+            ? ((config.showWeekdays && config.showDayNumbers) ? 28 : 18)
+            : 0;
+        const segmentHeight = headerRowHeight + idealCellSize + 12; // cell size + row gaps
 
-            // Limit for current page (footer is present on every page)
-            let currentLimit = maxPageHeight - estimatedFooterHeight;
-            if (pages.length === 0) {
-                currentLimit -= page1HeaderHeight;
-            } else {
-                currentLimit -= miniHeaderHeight;
-            }
+        habits.forEach((habit) => {
+            let remainingSegments = [...segments];
+            let segmentOffset = 0;
+            let isContinued = false;
 
-            // Include a 20px safety buffer to prevent edge-case clipping at page breaks
-            if (currentPageHeight + habitHeight + 20 > currentLimit && currentPageHabits.length > 0) {
-                pages.push({
-                    habits: currentPageHabits,
-                    isFirst: pages.length === 0,
-                    isLast: false
+            while (remainingSegments.length > 0) {
+                // Limit for current page (footer is present on every page)
+                let currentLimit = maxPageHeight - estimatedFooterHeight;
+                if (pages.length === 0 && currentPageItems.length === 0) {
+                    currentLimit -= page1HeaderHeight;
+                } else {
+                    currentLimit -= miniHeaderHeight;
+                }
+
+                // If page is not empty, check if we can fit at least 1 segment of this habit
+                const requiredHeightForOneSegment = (isContinued ? 20 : 28) + segmentHeight;
+                
+                if (currentPageHeight + requiredHeightForOneSegment + 20 > currentLimit && currentPageItems.length > 0) {
+                    // Start a new page
+                    pages.push({
+                        items: currentPageItems,
+                        isFirst: pages.length === 0,
+                        isLast: false
+                    });
+                    currentPageItems = [];
+                    currentPageHeight = 0;
+                    
+                    // Recalculate limit for the new page
+                    currentLimit = maxPageHeight - estimatedFooterHeight - miniHeaderHeight;
+                }
+
+                // Calculate how many segments we can fit on this page
+                const availableHeight = currentLimit - currentPageHeight - (isContinued ? 20 : 28) - 20; // minus label height and safety buffer
+                let countToFit = Math.floor(availableHeight / segmentHeight);
+                countToFit = Math.max(1, countToFit); // Fit at least 1 segment
+
+                const sliceCount = Math.min(countToFit, remainingSegments.length);
+                const segmentsForPage = remainingSegments.slice(0, sliceCount);
+
+                const itemHeight = (isContinued ? 20 : 28) + sliceCount * segmentHeight;
+
+                currentPageItems.push({
+                    habit: habit,
+                    segments: segmentsForPage,
+                    startIndex: segmentOffset,
+                    isContinued: isContinued
                 });
-                currentPageHabits = [habit];
-                currentPageHeight = habitHeight;
-            } else {
-                currentPageHabits.push(habit);
-                currentPageHeight += habitHeight;
+
+                currentPageHeight += itemHeight;
+
+                // Advance offsets
+                remainingSegments = remainingSegments.slice(sliceCount);
+                segmentOffset += sliceCount;
+                isContinued = true;
             }
         });
 
-        if (currentPageHabits.length > 0) {
+        if (currentPageItems.length > 0) {
             pages.push({
-                habits: currentPageHabits,
+                items: currentPageItems,
                 isFirst: pages.length === 0,
                 isLast: true
             });
@@ -598,26 +629,29 @@ function renderDocPages() {
 
         // B. Render Habit Tables
         let tablesHTML = '';
-        if (page.habits.length === 0) {
+        if (page.items.length === 0) {
             tablesHTML = `
                 <div style="text-align: center; padding: 40px; opacity: 0.5; font-style: italic;">
                     No habits or questions added yet. Create one in the sidebar!
                 </div>
             `;
         } else {
-            page.habits.forEach(habit => {
-                const totalRowsInGroup = segments.length * 2;
+            page.items.forEach(item => {
+                const habit = item.habit;
+                const itemSegments = item.segments;
+                const totalRowsInGroup = itemSegments.length * 2;
                 let tbodyHTML = '';
 
-                segments.forEach((segmentDates, segIndex) => {
+                itemSegments.forEach((segmentDates, segIndex) => {
                     // Days Header Row
                     let headerRowHTML = '';
                     if (segIndex === 0) {
+                        const displayName = item.isContinued ? `${escapeHTML(habit.name)} <span class="cont-label">(cont.)</span>` : escapeHTML(habit.name);
                         headerRowHTML += `
                             <td class="habit-label-cell" rowspan="${totalRowsInGroup}" style="width: ${habitLabelColumnWidth}px; max-width: ${habitLabelColumnWidth}px;">
                                 <div class="habit-label-content">
                                     <span class="habit-label-emoji"><i data-lucide="${habit.icon}" class="habit-icon-svg"></i></span>
-                                    <span class="habit-label-text" title="${habit.name}">${escapeHTML(habit.name)}</span>
+                                    <span class="habit-label-text" title="${habit.name}">${displayName}</span>
                                 </div>
                             </td>
                         `;

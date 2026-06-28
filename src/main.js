@@ -9,10 +9,7 @@ const { createIcons } = lucide;
 let habits = [
     { id: '1', name: 'Diet Check', icon: 'Apple' },
     { id: '2', name: 'Water (1 Gal)', icon: 'Droplet' },
-    { id: '3', name: 'Read 10 Pgs', icon: 'BookOpen' },
-    { id: '4', name: 'Workout 1', icon: 'Dumbbell' },
-    { id: '5', name: 'Workout 2 (Out)', icon: 'Trees' },
-    { id: '6', name: 'Did I meditate?', icon: 'Brain' }
+    { id: '3', name: 'Read 10 Pgs', icon: 'BookOpen' }
 ];
 
 let selectedIconName = 'Droplet';
@@ -183,7 +180,7 @@ const exportPdfBtn = document.getElementById('export-pdf-btn');
 // Preview output targets
 const pdfPagesContainer = document.getElementById('pdf-pages-container');
 
-const STATE_LOCAL_STORAGE_KEY = 'habit_tracker_designer_state_v7';
+const STATE_LOCAL_STORAGE_KEY = 'habit_tracker_designer_state_v8';
 
 // ==========================================
 // APP INITIALIZATION

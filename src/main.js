@@ -1161,50 +1161,29 @@ function hexToRgb(hex) {
     } : { r: 0, g: 0, b: 0 };
 }
 
-async function triggerPDFExport() {
-    exportPdfBtn.disabled = true;
-    const oldText = exportPdfBtn.innerHTML;
-    exportPdfBtn.innerHTML = '<span class="btn-icon">⏳</span> Exporting...';
+function triggerPDFExport() {
+    // Inject dynamic @page print CSS rules to set size and orientation automatically
+    const styleEl = document.createElement('style');
+    styleEl.id = 'dynamic-print-styles';
+    const isPortrait = config.pageOrientation === 'portrait';
+    const orientation = isPortrait ? 'portrait' : 'landscape';
+    const size = config.pageSize === 'a4' ? 'A4' : 'letter';
     
-    try {
-        const formattedTitle = (config.gridTitle || 'habit-tracker').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-        
-        // Request the PDF stream from backend Connect middleware
-        const response = await fetch('/api/pdf', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                bodyHtml: pdfPagesContainer.innerHTML,
-                format: config.pageSize,
-                orientation: config.pageOrientation,
-                filename: formattedTitle
-            })
-        });
-
-        if (!response.ok) {
-            const errData = await response.json().catch(() => ({}));
-            throw new Error(errData.error || 'Failed to generate PDF on server');
+    styleEl.innerHTML = `
+        @page {
+            size: ${size} ${orientation};
+            margin: 0 !important;
         }
+    `;
+    document.head.appendChild(styleEl);
 
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${formattedTitle}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-        
-    } catch (e) {
-        console.error('PDF creation failed', e);
-        alert(`Could not generate PDF: ${e.message}. Please verify the dev server is running and has access to Puppeteer.`);
-    } finally {
-        exportPdfBtn.disabled = false;
-        exportPdfBtn.innerHTML = oldText;
-    }
+    // Call browser print dialog (e.g. Save as PDF)
+    window.print();
+
+    // Clean up style element afterward
+    setTimeout(() => {
+        styleEl.remove();
+    }, 1000);
 }
 
 // Helper to escape HTML tags

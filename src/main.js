@@ -1,6 +1,4 @@
 import './style.css';
-import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
 import Sortable from 'sortablejs';
 import * as lucide from 'lucide';
 const { createIcons } = lucide;
@@ -82,6 +80,9 @@ const MONTH_NAMES = [
 // Key: 'habitId-dateString', Value: boolean
 const checkedCells = new Map();
 
+// Share partitioned pages with PDF export to keep preview and PDF exactly in sync
+let partitionedPages = [];
+
 // Build the list of all available icons in Lucide (where value is an array of SVG elements)
 const habitIcons = {};
 Object.keys(lucide).forEach(key => {
@@ -142,7 +143,7 @@ const habitList = document.getElementById('habit-list');
 const habitCountBadge = document.getElementById('habit-count');
 const dragHint = document.getElementById('drag-hint');
 
-const periodModeToggle = document.getElementById('period-mode-toggle');
+const selectPeriodMode = document.getElementById('select-period-mode');
 const configMonth = document.getElementById('config-month');
 const configWeeks = document.getElementById('config-weeks');
 const configDays = document.getElementById('config-days');
@@ -238,8 +239,8 @@ function renderSidebarHabits() {
         item.innerHTML = `
             <div class="habit-item-info">
                 <span class="drag-handle">☰</span>
-                <span class="habit-item-emoji"><i data-lucide="${habit.icon}" class="habit-icon-svg"></i></span>
-                <span class="habit-item-name">${escapeHTML(habit.name)}</span>
+                <span class="habit-item-emoji" title="Click to change icon"><i data-lucide="${habit.icon}" class="habit-icon-svg"></i></span>
+                <span class="habit-item-name" contenteditable="true" spellcheck="false" title="Click to edit name">${escapeHTML(habit.name)}</span>
             </div>
             <div class="habit-item-actions">
                 <button type="button" class="delete-habit-btn" title="Delete habit">
@@ -252,6 +253,35 @@ function renderSidebarHabits() {
         item.querySelector('.delete-habit-btn').addEventListener('click', (e) => {
             e.stopPropagation();
             deleteHabit(habit.id);
+        });
+
+        // Click to change icon listener
+        const iconEl = item.querySelector('.habit-item-emoji');
+        iconEl.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showIconPopover(iconEl, (iconName) => {
+                habit.icon = iconName;
+                renderAll();
+            });
+        });
+
+        // Inline edit habit name listeners
+        const nameEl = item.querySelector('.habit-item-name');
+        nameEl.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                nameEl.blur();
+            }
+        });
+
+        nameEl.addEventListener('blur', () => {
+            const newName = nameEl.innerText.trim();
+            if (newName && newName !== habit.name) {
+                habit.name = newName;
+                renderAll();
+            } else {
+                nameEl.innerText = habit.name;
+            }
         });
 
         habitList.appendChild(item);
@@ -502,6 +532,9 @@ function renderDocPages() {
 
     pages[pages.length - 1].isLast = true;
 
+    // Save to partitionedPages to keep PDF export in sync
+    partitionedPages = pages;
+
     // 3. Render HTML for each page card
     pages.forEach((page, pageIdx) => {
         const pageNum = pageIdx + 1;
@@ -654,11 +687,7 @@ function renderDocPages() {
                 notesHTML = `
                     <div class="pdf-notes-box">
                         <h3>Notes & Reflections</h3>
-                        <div class="notes-lines">
-                            <div class="note-line" style="border-bottom-color: var(--pdf-page-text)"></div>
-                            <div class="note-line" style="border-bottom-color: var(--pdf-page-text)"></div>
-                            <div class="note-line" style="border-bottom-color: var(--pdf-page-text)"></div>
-                        </div>
+                        <div class="notes-lines"></div>
                     </div>
                 `;
             }
@@ -706,6 +735,68 @@ function renderDocPages() {
         `;
 
         pdfPagesContainer.appendChild(pageCard);
+
+        // Dynamically calculate and fill reflections notes lines to utilize the remaining area
+        if (config.showNotesSection) {
+            const pdfContentEl = pageCard.querySelector('.pdf-content');
+            const headerEl = pdfContentEl.querySelector('.pdf-header');
+            const gridTableContainer = pdfContentEl.querySelector('.grid-table-container');
+            const footerEl = pdfContentEl.querySelector('.pdf-footer');
+            const notesBox = footerEl ? footerEl.querySelector('.pdf-notes-box') : null;
+            const legendBox = footerEl ? footerEl.querySelector('.pdf-legend-box') : null;
+
+            if (pdfContentEl && gridTableContainer && footerEl && notesBox) {
+                const contentHeight = pdfContentEl.clientHeight;
+                const headerHeight = headerEl ? headerEl.offsetHeight : 0;
+                
+                let headerMargin = 0;
+                if (headerEl) {
+                    const headerStyle = window.getComputedStyle(headerEl);
+                    headerMargin = parseFloat(headerStyle.marginBottom) || 0;
+                }
+
+                // Calculate cumulative height of the tables
+                let tablesHeight = 0;
+                const tables = gridTableContainer.querySelectorAll('.habit-segmented-table-wrapper');
+                tables.forEach((t, idx) => {
+                    tablesHeight += t.offsetHeight;
+                    if (idx > 0) tablesHeight += 20; // 20px flex gap between tables
+                });
+
+                let tableContainerMargin = 0;
+                const tablesStyle = window.getComputedStyle(gridTableContainer);
+                tableContainerMargin = parseFloat(tablesStyle.marginBottom) || 0;
+
+                const footerHeight = footerEl.offsetHeight;
+                const legendHeight = legendBox ? legendBox.offsetHeight : 0;
+                const emptyNotesBoxHeight = notesBox.offsetHeight;
+
+                // Mathematical identity to find maximum notes lines height:
+                const remainingSpace = contentHeight - (headerHeight + headerMargin + tablesHeight + tableContainerMargin + footerHeight);
+                const maxNotesLinesHeight = remainingSpace + Math.max(0, legendHeight - emptyNotesBoxHeight);
+
+                // Solve for L lines where height = L * 14 + (L - 1) * 12 = 26 * L - 12
+                const numLines = Math.max(0, Math.floor((maxNotesLinesHeight + 12) / 26));
+
+                page.notesLinesCount = numLines;
+
+                // Fill the notes area in DOM
+                const notesLinesContainer = notesBox.querySelector('.notes-lines');
+                if (notesLinesContainer) {
+                    notesLinesContainer.innerHTML = '';
+                    for (let i = 0; i < numLines; i++) {
+                        const line = document.createElement('div');
+                        line.className = 'note-line';
+                        line.style.borderBottomColor = 'var(--pdf-page-text)';
+                        notesLinesContainer.appendChild(line);
+                    }
+                }
+            } else {
+                page.notesLinesCount = 0;
+            }
+        } else {
+            page.notesLinesCount = 0;
+        }
     });
 
     // Set custom accent color variable
@@ -812,18 +903,9 @@ function renderIconPopover(query = '') {
         span.innerHTML = `<i data-lucide="${item.name}"></i>`;
         
         span.addEventListener('click', () => {
-            selectedIconName = item.name;
-            const previewEl = document.getElementById('selected-icon-preview');
-            if (previewEl) {
-                const parent = previewEl.parentNode;
-                const newIcon = document.createElement('i');
-                newIcon.id = 'selected-icon-preview';
-                newIcon.style.width = '18px';
-                newIcon.style.height = '18px';
-                newIcon.setAttribute('data-lucide', item.name);
-                parent.replaceChild(newIcon, previewEl);
+            if (activeIconSelectCallback) {
+                activeIconSelectCallback(item.name);
             }
-            refreshLucideIcons();
             iconPopover.classList.add('hidden');
         });
         
@@ -834,6 +916,27 @@ function renderIconPopover(query = '') {
     createIcons({
         icons: habitIcons
     });
+}
+
+let activeIconSelectCallback = null;
+
+function showIconPopover(triggerEl, onSelectCallback) {
+    const rect = triggerEl.getBoundingClientRect();
+    const scrollTop = window.scrollY || document.documentElement.scrollTop;
+    const scrollLeft = window.scrollX || document.documentElement.scrollLeft;
+
+    iconPopover.style.position = 'absolute';
+    iconPopover.style.marginTop = '0px';
+    iconPopover.style.top = `${rect.bottom + scrollTop + 6}px`;
+    iconPopover.style.left = `${Math.min(window.innerWidth - 280, rect.left + scrollLeft)}px`;
+
+    iconSearchInput.value = '';
+    renderIconPopover('');
+    iconPopover.classList.remove('hidden');
+
+    activeIconSelectCallback = onSelectCallback;
+
+    setTimeout(() => iconSearchInput.focus(), 50);
 }
 
 // ==========================================
@@ -847,21 +950,33 @@ function initUIControls() {
     // Initial popover rendering (default state)
     renderIconPopover('');
 
-    // Icon Popover behavior
+    // Icon Popover behavior for the add habit form
     iconTrigger.addEventListener('click', (e) => {
         e.stopPropagation();
-        const isHidden = iconPopover.classList.contains('hidden');
-        iconPopover.classList.toggle('hidden');
-        if (isHidden) {
-            iconSearchInput.value = '';
-            renderIconPopover('');
-            // Focus with a slight timeout so layout renders
-            setTimeout(() => iconSearchInput.focus(), 50);
+        if (iconPopover.classList.contains('hidden')) {
+            showIconPopover(iconTrigger, (iconName) => {
+                selectedIconName = iconName;
+                const previewEl = document.getElementById('selected-icon-preview');
+                if (previewEl) {
+                    const parent = previewEl.parentNode;
+                    const newIcon = document.createElement('i');
+                    newIcon.id = 'selected-icon-preview';
+                    newIcon.style.width = '18px';
+                    newIcon.style.height = '18px';
+                    newIcon.setAttribute('data-lucide', iconName);
+                    parent.replaceChild(newIcon, previewEl);
+                }
+                refreshLucideIcons();
+            });
+        } else {
+            iconPopover.classList.add('hidden');
         }
     });
 
     document.addEventListener('click', (e) => {
-        if (!iconPopover.contains(e.target) && e.target !== iconTrigger) {
+        if (!iconPopover.contains(e.target) && 
+            e.target !== iconTrigger && 
+            !e.target.closest('.habit-item-emoji')) {
             iconPopover.classList.add('hidden');
         }
     });
@@ -887,27 +1002,22 @@ function initUIControls() {
     });
 
     // Toggle Period Modes
-    periodModeToggle.querySelectorAll('.toggle-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            periodModeToggle.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
+    selectPeriodMode.addEventListener('change', (e) => {
+        const mode = e.target.value;
+        config.periodMode = mode;
 
-            const mode = btn.dataset.mode;
-            config.periodMode = mode;
+        // Toggle config menus
+        configMonth.classList.add('hidden');
+        configWeeks.classList.add('hidden');
+        configDays.classList.add('hidden');
+        configRange.classList.add('hidden');
 
-            // Toggle config menus
-            configMonth.classList.add('hidden');
-            configWeeks.classList.add('hidden');
-            configDays.classList.add('hidden');
-            configRange.classList.add('hidden');
+        if (mode === 'month') configMonth.classList.remove('hidden');
+        if (mode === 'weeks') configWeeks.classList.remove('hidden');
+        if (mode === 'days') configDays.classList.remove('hidden');
+        if (mode === 'range') configRange.classList.remove('hidden');
 
-            if (mode === 'month') configMonth.classList.remove('hidden');
-            if (mode === 'weeks') configWeeks.classList.remove('hidden');
-            if (mode === 'days') configDays.classList.remove('hidden');
-            if (mode === 'range') configRange.classList.remove('hidden');
-
-            renderAll();
-        });
+        renderAll();
     });
 
     // Dynamic binding to config selectors & inputs
@@ -963,14 +1073,8 @@ function initUIControls() {
     selectRangeStart.value = config.startRangeDate;
     selectRangeEnd.value = config.endRangeDate;
 
-    // Set initial toggle mode button and config panels visibility
-    periodModeToggle.querySelectorAll('.toggle-btn').forEach(btn => {
-        if (btn.dataset.mode === config.periodMode) {
-            btn.classList.add('active');
-        } else {
-            btn.classList.remove('active');
-        }
-    });
+    // Set initial select value
+    selectPeriodMode.value = config.periodMode;
 
     configMonth.classList.add('hidden');
     configWeeks.classList.add('hidden');
@@ -1063,339 +1167,40 @@ async function triggerPDFExport() {
     exportPdfBtn.innerHTML = '<span class="btn-icon">⏳</span> Exporting...';
     
     try {
-        // Match PDF size configuration and orientation
-        const orientation = config.pageOrientation === 'landscape' ? 'l' : 'p';
-        const format = config.pageSize; // 'a4' or 'letter'
-        
-        // Define page dimensions in points (pt)
-        const isPortrait = config.pageOrientation === 'portrait';
-        const isA4 = config.pageSize === 'a4';
-        
-        let pageWidth, pageHeight;
-        if (isA4) {
-            pageWidth = isPortrait ? 595.28 : 841.89;
-            pageHeight = isPortrait ? 841.89 : 595.28;
-        } else {
-            pageWidth = isPortrait ? 612 : 792;
-            pageHeight = isPortrait ? 792 : 612;
-        }
-        
-        const doc = new jsPDF({
-            orientation: orientation,
-            unit: 'pt',
-            format: format
-        });
-        
-        // Match active theme colors
-        let bgHex = '#ffffff';
-        let textHex = '#27272a';
-        if (config.themePreset === 'custom') {
-            bgHex = config.pdfBgColor;
-            textHex = config.pdfTextColor;
-        } else {
-            const preset = themeColorPresets[config.themePreset];
-            if (preset) {
-                bgHex = preset.bg;
-                textHex = preset.text;
-            }
-        }
-        
-        const bgRgb = hexToRgb(bgHex);
-        const textRgb = hexToRgb(textHex);
-        
-        // Apply theme settings helper
-        const applyTheme = () => {
-            doc.setFillColor(bgRgb.r, bgRgb.g, bgRgb.b);
-            doc.setTextColor(textRgb.r, textRgb.g, textRgb.b);
-            doc.setDrawColor(textRgb.r, textRgb.g, textRgb.b);
-        };
-        
-        const drawPageBackground = () => {
-            applyTheme();
-            doc.rect(0, 0, pageWidth, pageHeight, 'F');
-        };
-        
-        // Margins and horizontal coordinates
-        const leftMargin = 40;
-        const rightMargin = 40;
-        const topMargin = 40;
-        const bottomMargin = 40;
-        const contentWidth = pageWidth - leftMargin - rightMargin;
-        
-        // Fetch timeframe data and calculate cell dimensions
-        const dates = getGridDates();
-        const colsPerRow = parseInt(config.columnsPerRow);
-        const segments = [];
-        if (colsPerRow > 0 && dates.length > colsPerRow) {
-            for (let i = 0; i < dates.length; i += colsPerRow) {
-                segments.push(dates.slice(i, i + colsPerRow));
-            }
-        } else {
-            segments.push(dates);
-        }
-        
-        const maxCols = Math.max(...segments.map(s => s.length));
-        
-        // Reserve space for labels column
-        // We calculate column widths dynamically to align grids with the right margin
-        let cellSize = Math.floor((contentWidth - 100) / maxCols);
-        cellSize = Math.max(10, Math.min(26, cellSize));
-        
-        const gridWidthUsed = maxCols * cellSize;
-        const labelColWidth = contentWidth - gridWidthUsed;
-        
-        // Calculate header and segment heights
-        const headerRowHeight = (config.showWeekdays || config.showDayNumbers)
-            ? ((config.showWeekdays && config.showDayNumbers) ? 16 : 10)
-            : 0;
-        const segmentHeight = headerRowHeight + cellSize + 3 + 4;
-        
-        // Estimate footer height
-        const estimatedFooterHeight = (config.showNotesSection ? 85 : 0) + (config.showStatusLegend ? 35 : 0) + (config.showNotesSection || config.showStatusLegend ? 20 : 0);
-        
-        // 1. Partition habits/questions into pages
-        const pages = [];
-        let currentPageHabits = [];
-        let currentPageHeight = 0;
-        
-        const page1StartHead = topMargin + 57; // header + spacing
-        const otherPagesStartHead = topMargin + 26; // mini-header + spacing
-        
-        if (habits.length === 0) {
-            pages.push([]);
-        } else {
-            habits.forEach((habit) => {
-                const habitHeight = 12 + segments.length * segmentHeight;
-                
-                const maxPageContentHeight = pageHeight - bottomMargin - estimatedFooterHeight;
-                const currentLimit = (pages.length === 0)
-                    ? (maxPageContentHeight - page1StartHead)
-                    : (maxPageContentHeight - otherPagesStartHead);
-                    
-                // Include a 15pt safety buffer to prevent content overlapping the footer
-                if (currentPageHeight + habitHeight + 15 > currentLimit && currentPageHabits.length > 0) {
-                    pages.push(currentPageHabits);
-                    currentPageHabits = [habit];
-                    currentPageHeight = habitHeight;
-                } else {
-                    currentPageHabits.push(habit);
-                    currentPageHeight += habitHeight;
-                }
-            });
-            if (currentPageHabits.length > 0) {
-                pages.push(currentPageHabits);
-            }
-        }
-        
-        // 2. Draw loop for each page
-        for (let pageIdx = 0; pageIdx < pages.length; pageIdx++) {
-            if (pageIdx > 0) {
-                doc.addPage(format, orientation);
-            }
-            
-            drawPageBackground();
-            
-            let yCursor = topMargin;
-            
-            if (pageIdx === 0) {
-                // A. Draw main header
-                applyTheme();
-                
-                // Title Font Selection mapping
-                let titleFont = 'Helvetica';
-                let titleType = 'bold';
-                if (config.titleFont === 'playfair') {
-                    titleFont = 'Times';
-                    titleType = 'bolditalic';
-                } else if (config.titleFont === 'abril') {
-                    titleFont = 'Times';
-                    titleType = 'bold';
-                }
-                
-                doc.setFont(titleFont, titleType);
-                doc.setFontSize(22);
-                doc.text(config.gridTitle || 'Personal Habit Tracker', leftMargin, yCursor + 18);
-                
-                doc.setFont('Helvetica', 'normal');
-                doc.setFontSize(9);
-                doc.text(getTimeframeSubtitleText().toUpperCase(), leftMargin, yCursor + 32);
-                
-                // Start Date Box
-                if (config.showStartDateBox) {
-                    const boxW = 80;
-                    const boxH = 20;
-                    const boxX = pageWidth - rightMargin - boxW;
-                    const boxY = yCursor + 2;
-                    
-                    doc.setFont('Helvetica', 'bold');
-                    doc.setFontSize(6);
-                    doc.text('start', boxX - 22, boxY + 8);
-                    doc.text('date', boxX - 22, boxY + 15);
-                    
-                    doc.setLineWidth(1.5);
-                    doc.roundedRect(boxX, boxY, boxW, boxH, 2, 2, 'D');
-                }
-                
-                yCursor += 42;
-                doc.setLineWidth(1.5);
-                doc.line(leftMargin, yCursor, pageWidth - rightMargin, yCursor);
-                yCursor += 15;
-            } else {
-                // B. Draw mini header
-                applyTheme();
-                doc.setFont('Helvetica', 'bold');
-                doc.setFontSize(9);
-                doc.text((config.gridTitle || 'Personal Habit Tracker').toUpperCase(), leftMargin, yCursor + 10);
-                
-                doc.setFont('Helvetica', 'normal');
-                doc.setFontSize(8);
-                const pageStr = `Page ${pageIdx + 1} of ${pages.length}`;
-                const pageStrWidth = doc.getTextWidth(pageStr);
-                doc.text(pageStr, pageWidth - rightMargin - pageStrWidth, yCursor + 10);
-                
-                yCursor += 16;
-                doc.setLineWidth(1);
-                doc.line(leftMargin, yCursor, pageWidth - rightMargin, yCursor);
-                yCursor += 10;
-            }
-            
-            // C. Draw habits/questions
-            const pageHabits = pages[pageIdx];
-            if (pageHabits.length === 0) {
-                applyTheme();
-                doc.setFont('Helvetica', 'italic');
-                doc.setFontSize(10);
-                doc.text('No habits or questions added yet. Create one in the sidebar!', leftMargin + 20, yCursor + 40);
-            } else {
-                pageHabits.forEach((habit, hIdx) => {
-                    applyTheme();
-                    
-                    // Draw habit name/label
-                    doc.setFont('Helvetica', 'bold');
-                    doc.setFontSize(8.5);
-                    
-                    // Split long question lines to fit inside label column width (with padding)
-                    const wrappedNameLines = doc.splitTextToSize(habit.name.toUpperCase(), labelColWidth - 16);
-                    
-                    // Draw clean decorative item outline marker (a tiny squircle box)
-                    doc.setLineWidth(1.2);
-                    doc.roundedRect(leftMargin, yCursor + 2, 5, 5, 1.2, 1.2, 'D');
-                    
-                    // Draw label text
-                    doc.text(wrappedNameLines, leftMargin + 10, yCursor + 7);
-                    
-                    let innerY = yCursor;
-                    
-                    // Render date grids
-                    segments.forEach((segmentDates, segIndex) => {
-                        const yHeader = innerY;
-                        
-                        // Draw header values (Weekdays / Day Numbers)
-                        segmentDates.forEach((d, colIndex) => {
-                            const cellX = leftMargin + labelColWidth + colIndex * cellSize;
-                            const dayDisplay = config.periodMode === 'days' ? d.absoluteIndex : d.dayNumber;
-                            
-                            doc.setFont('Helvetica', 'normal');
-                            if (config.showWeekdays && config.showDayNumbers) {
-                                doc.setFontSize(5.5);
-                                doc.text(d.weekdayLabel.toUpperCase(), cellX + cellSize/2, yHeader + 5, {align: 'center'});
-                                doc.setFont('Helvetica', 'bold');
-                                doc.setFontSize(8);
-                                doc.text(String(dayDisplay), cellX + cellSize/2, yHeader + 13, {align: 'center'});
-                            } else if (config.showDayNumbers) {
-                                doc.setFont('Helvetica', 'bold');
-                                doc.setFontSize(8);
-                                doc.text(String(dayDisplay), cellX + cellSize/2, yHeader + 8, {align: 'center'});
-                            } else if (config.showWeekdays) {
-                                doc.setFontSize(6.5);
-                                doc.text(d.weekdayLabel.toUpperCase(), cellX + cellSize/2, yHeader + 7, {align: 'center'});
-                            }
-                        });
-                        
-                        // Checkbox boxes row
-                        const yBox = yHeader + headerRowHeight + 2;
-                        doc.setLineWidth(1.2);
-                        
-                        segmentDates.forEach((d, colIndex) => {
-                            const cellX = leftMargin + labelColWidth + colIndex * cellSize;
-                            const key = `${habit.id}-${d.dateString}`;
-                            const isChecked = checkedCells.get(key) === true;
-                            
-                            if (isChecked) {
-                                applyTheme(); // sets fill to textRgb
-                                doc.roundedRect(cellX + 1.2, yBox, cellSize - 2.4, cellSize - 2.4, 2, 2, 'FD');
-                            } else {
-                                doc.roundedRect(cellX + 1.2, yBox, cellSize - 2.4, cellSize - 2.4, 2, 2, 'D');
-                            }
-                        });
-                        
-                        innerY += segmentHeight;
-                    });
-                    
-                    const habitBlockHeight = 12 + segments.length * segmentHeight;
-                    
-                    // Draw separation line below habit block (except last habit)
-                    if (hIdx < pageHabits.length - 1) {
-                        doc.setLineWidth(0.5);
-                        doc.line(leftMargin, yCursor + habitBlockHeight - 3, pageWidth - rightMargin, yCursor + habitBlockHeight - 3);
-                    }
-                    
-                    yCursor += habitBlockHeight;
-                });
-            }
-            
-            // D. Draw footer
-            if (config.showNotesSection || config.showStatusLegend) {
-                const footerY = pageHeight - bottomMargin - estimatedFooterHeight + 10;
-                applyTheme();
-                
-                doc.setLineWidth(1.5);
-                doc.line(leftMargin, footerY, pageWidth - rightMargin, footerY);
-                
-                let footCursor = footerY + 12;
-                
-                if (config.showNotesSection) {
-                    doc.setFont('Helvetica', 'bold');
-                    doc.setFontSize(8.5);
-                    doc.text('NOTES & REFLECTIONS', leftMargin, footCursor + 8);
-                    
-                    doc.setLineWidth(0.5);
-                    doc.line(leftMargin, footCursor + 20, pageWidth - rightMargin, footCursor + 20);
-                    doc.line(leftMargin, footCursor + 35, pageWidth - rightMargin, footCursor + 35);
-                    doc.line(leftMargin, footCursor + 50, pageWidth - rightMargin, footCursor + 50);
-                    
-                    footCursor += 55;
-                }
-                
-                if (config.showStatusLegend) {
-                    doc.setFont('Helvetica', 'bold');
-                    doc.setFontSize(8);
-                    doc.text('LEGEND', leftMargin, footCursor + 8);
-                    
-                    let legX = leftMargin + 60;
-                    habits.forEach((h, hIdx) => {
-                        if (legX + 80 > pageWidth - rightMargin) return; // safety boundary check
-                        
-                        doc.setLineWidth(1.2);
-                        doc.roundedRect(legX, footCursor + 2, 6, 6, 1.5, 1.5, 'FD');
-                        
-                        doc.setFont('Helvetica', 'normal');
-                        doc.setFontSize(7.5);
-                        doc.text(h.name.toUpperCase(), legX + 10, footCursor + 8);
-                        
-                        legX += doc.getTextWidth(h.name.toUpperCase()) + 25;
-                    });
-                }
-            }
-        }
-        
-        // Download document
         const formattedTitle = (config.gridTitle || 'habit-tracker').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-        doc.save(`${formattedTitle}.pdf`);
+        
+        // Request the PDF stream from backend Connect middleware
+        const response = await fetch('/api/pdf', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                bodyHtml: pdfPagesContainer.innerHTML,
+                format: config.pageSize,
+                orientation: config.pageOrientation,
+                filename: formattedTitle
+            })
+        });
+
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.error || 'Failed to generate PDF on server');
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${formattedTitle}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
         
     } catch (e) {
         console.error('PDF creation failed', e);
-        alert('Could not generate PDF. Please try again.');
+        alert(`Could not generate PDF: ${e.message}. Please verify the dev server is running and has access to Puppeteer.`);
     } finally {
         exportPdfBtn.disabled = false;
         exportPdfBtn.innerHTML = oldText;

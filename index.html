@@ -35,16 +35,6 @@
                             </button>
                         </div>
                         <button type="button" id="add-habit-btn" class="btn btn-primary">Add Item</button>
-                        
-                        <!-- Icon Picker Popover -->
-                        <div id="icon-popover" class="icon-popover hidden">
-                            <div class="icon-search-container">
-                                <input type="text" id="icon-search-input" placeholder="Search icons (e.g. star, heart)..." autocomplete="off">
-                            </div>
-                            <div class="icon-list" id="icon-popover-list">
-                                <!-- Populated dynamically by JS -->
-                            </div>
-                        </div>
                     </div>
  
                     <div class="habit-list-container">
@@ -189,93 +179,84 @@
                     <p>What you see is what gets exported. Check details before downloading.</p>
                 </div>
                 
-                <!-- Timeframe controls horizontally -->
-                <div class="horizontal-timeframe">
-                    <div class="horizontal-form-group">
-                        <label>Period Mode</label>
-                        <div class="toggle-group" id="period-mode-toggle">
-                            <button class="toggle-btn active" data-mode="month">Month</button>
-                            <button class="toggle-btn" data-mode="weeks">Weeks</button>
-                            <button class="toggle-btn" data-mode="days">Days</button>
-                            <button class="toggle-btn" data-mode="range">Range</button>
-                        </div>
+                <!-- Compact timeframe controls -->
+                <div class="preview-timeframe-controls">
+                    <div class="form-group-inline">
+                        <label for="select-period-mode">Period</label>
+                        <select id="select-period-mode">
+                            <option value="month" selected>Month</option>
+                            <option value="weeks">Weeks</option>
+                            <option value="days">Days</option>
+                            <option value="range">Range</option>
+                        </select>
                     </div>
 
-                    <!-- Dynamic timeframe options based on mode -->
-                    <div id="timeframe-options" class="horizontal-timeframe-options">
+                    <div id="timeframe-options-container" class="timeframe-options-container">
                         <!-- Month Mode Config -->
                         <div id="config-month" class="time-config-panel">
-                            <div class="horizontal-row">
-                                <div class="horizontal-form-group">
-                                    <label for="select-month">Month</label>
-                                    <select id="select-month">
-                                        <option value="0">January</option>
-                                        <option value="1">February</option>
-                                        <option value="2">March</option>
-                                        <option value="3">April</option>
-                                        <option value="4">May</option>
-                                        <option value="5">June</option>
-                                        <option value="6">July</option>
-                                        <option value="7">August</option>
-                                        <option value="8">September</option>
-                                        <option value="9">October</option>
-                                        <option value="10">November</option>
-                                        <option value="11" selected>December</option>
-                                    </select>
-                                </div>
-                                <div class="horizontal-form-group">
-                                    <label for="select-month-year">Year</label>
-                                    <input type="number" id="select-month-year" value="2026" min="2020" max="2100">
-                                </div>
+                            <div class="form-group-inline">
+                                <label for="select-month">Month</label>
+                                <select id="select-month">
+                                    <option value="0">January</option>
+                                    <option value="1">February</option>
+                                    <option value="2">March</option>
+                                    <option value="3">April</option>
+                                    <option value="4">May</option>
+                                    <option value="5">June</option>
+                                    <option value="6">July</option>
+                                    <option value="7">August</option>
+                                    <option value="8">September</option>
+                                    <option value="9">October</option>
+                                    <option value="10">November</option>
+                                    <option value="11" selected>December</option>
+                                </select>
+                            </div>
+                            <div class="form-group-inline">
+                                <label for="select-month-year">Year</label>
+                                <input type="number" id="select-month-year" value="2026" min="2020" max="2100">
                             </div>
                         </div>
 
                         <!-- Weeks Mode Config -->
                         <div id="config-weeks" class="time-config-panel hidden">
-                            <div class="horizontal-row">
-                                <div class="horizontal-form-group">
-                                    <label for="select-week-start">Start Date</label>
-                                    <input type="date" id="select-week-start" value="2026-06-29">
-                                </div>
-                                <div class="horizontal-form-group">
-                                    <label for="select-weeks-count">Number of Weeks</label>
-                                    <select id="select-weeks-count">
-                                        <option value="1">1 Week</option>
-                                        <option value="2">2 Weeks</option>
-                                        <option value="3">3 Weeks</option>
-                                        <option value="4" selected>4 Weeks</option>
-                                        <option value="5">5 Weeks</option>
-                                        <option value="6">6 Weeks</option>
-                                    </select>
-                                </div>
+                            <div class="form-group-inline">
+                                <label for="select-week-start">Start</label>
+                                <input type="date" id="select-week-start" value="2026-06-29">
+                            </div>
+                            <div class="form-group-inline">
+                                <label for="select-weeks-count">Weeks</label>
+                                <select id="select-weeks-count">
+                                    <option value="1">1 Wk</option>
+                                    <option value="2">2 Wks</option>
+                                    <option value="3">3 Wks</option>
+                                    <option value="4" selected>4 Wks</option>
+                                    <option value="5">5 Wks</option>
+                                    <option value="6">6 Wks</option>
+                                </select>
                             </div>
                         </div>
 
                         <!-- Days Mode Config -->
                         <div id="config-days" class="time-config-panel hidden">
-                            <div class="horizontal-row">
-                                <div class="horizontal-form-group">
-                                    <label for="select-days-start">Start Date</label>
-                                    <input type="date" id="select-days-start" value="2026-06-28">
-                                </div>
-                                <div class="horizontal-form-group">
-                                    <label for="select-days-count">Number of Days</label>
-                                    <input type="number" id="select-days-count" value="75" min="5" max="150">
-                                </div>
+                            <div class="form-group-inline">
+                                <label for="select-days-start">Start</label>
+                                <input type="date" id="select-days-start" value="2026-06-28">
+                            </div>
+                            <div class="form-group-inline">
+                                <label for="select-days-count">Days</label>
+                                <input type="number" id="select-days-count" value="75" min="5" max="150">
                             </div>
                         </div>
 
                         <!-- Range Mode Config -->
                         <div id="config-range" class="time-config-panel hidden">
-                            <div class="horizontal-row">
-                                <div class="horizontal-form-group">
-                                    <label for="select-range-start">Start Date</label>
-                                    <input type="date" id="select-range-start" value="2026-06-28">
-                                </div>
-                                <div class="horizontal-form-group">
-                                    <label for="select-range-end">End Date</label>
-                                    <input type="date" id="select-range-end" value="2026-07-28">
-                                </div>
+                            <div class="form-group-inline">
+                                <label for="select-range-start">Start</label>
+                                <input type="date" id="select-range-start" value="2026-06-28">
+                            </div>
+                            <div class="form-group-inline">
+                                <label for="select-range-end">End</label>
+                                <input type="date" id="select-range-end" value="2026-07-28">
                             </div>
                         </div>
                     </div>
@@ -292,5 +273,15 @@
 
     <!-- Script loading -->
     <script type="module" src="/src/main.js"></script>
+
+    <!-- Icon Picker Popover -->
+    <div id="icon-popover" class="icon-popover hidden">
+        <div class="icon-search-container">
+            <input type="text" id="icon-search-input" placeholder="Search icons (e.g. star, heart)..." autocomplete="off">
+        </div>
+        <div class="icon-list" id="icon-popover-list">
+            <!-- Populated dynamically by JS -->
+        </div>
+    </div>
 </body>
 </html>

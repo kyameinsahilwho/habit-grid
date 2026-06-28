@@ -1236,22 +1236,24 @@ async function triggerPDFExport() {
             body { margin: 0; padding: 0; }
         `;
 
-        // 3. Request PDF from backend
-        const response = await fetch('/api/generate-pdf', {
+        const filename = (config.gridTitle || 'habit-tracker').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
+        // 3. Request PDF from serverless endpoint
+        const response = await fetch('/api/pdf', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                html,
-                css,
-                pageSize: size,
+                bodyHtml: html,
+                cssContent: css,
+                format: size.toLowerCase(),
                 orientation: orientation,
-                baseUrl: window.location.origin
+                filename: filename
             })
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.details || 'Failed to generate PDF');
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'Failed to generate PDF');
         }
 
         // 4. Handle PDF download
@@ -1259,7 +1261,7 @@ async function triggerPDFExport() {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${config.gridTitle || 'habit-grid'}.pdf`;
+        a.download = `${filename}.pdf`;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);

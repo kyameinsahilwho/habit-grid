@@ -14,24 +14,40 @@ let habits = [
 
 let selectedIconName = 'Droplet';
 
+// Calculate first date of next month dynamically for default settings
+const today = new Date();
+const nextMonthDate = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+const nextMonthYear = nextMonthDate.getFullYear();
+const nextMonthMonthVal = nextMonthDate.getMonth(); // 0-indexed
+
+const formatDateStr = (date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+};
+
+const defaultStartDate = formatDateStr(nextMonthDate);
+const defaultEndRangeDate = formatDateStr(new Date(nextMonthDate.getFullYear(), nextMonthDate.getMonth() + 1, nextMonthDate.getDate()));
+
 const config = {
     periodMode: 'days', // 'month' | 'weeks' | 'days'
 
     // Month Mode details
-    month: 11, // December (0-indexed)
-    year: 2026,
+    month: nextMonthMonthVal,
+    year: nextMonthYear,
 
     // Weeks Mode details
-    startWeekDate: '2026-06-29',
+    startWeekDate: defaultStartDate,
     weeksCount: 4,
 
     // Days Mode details
-    startDaysDate: '2026-06-28',
+    startDaysDate: defaultStartDate,
     daysCount: 75,
 
     // Range Mode details
-    startRangeDate: '2026-06-28',
-    endRangeDate: '2026-07-28',
+    startRangeDate: defaultStartDate,
+    endRangeDate: defaultEndRangeDate,
 
     // General styles
     gridTitle: 'Personal Habit Tracker',

@@ -93,15 +93,20 @@ export function PreviewCanvas({
 
         const footerHeight = footerEl.offsetHeight;
         const legendHeight = legendBox ? legendBox.offsetHeight : 0;
-        const emptyNotesBoxHeight = notesBox.offsetHeight;
+
+        // Find existing notes lines height to subtract from current footer height
+        const notesLinesContainer = notesBox.querySelector('.notes-lines') as HTMLElement;
+        const notesLinesHeight = notesLinesContainer ? notesLinesContainer.offsetHeight : 0;
+
+        // Base footer height excluding notes lines
+        const baseFooterHeight = Math.max(legendHeight, footerHeight - notesLinesHeight);
 
         const remainingSpace =
           contentHeight -
-          (headerHeight + headerMargin + tablesHeight + tableContainerMargin + footerHeight);
+          (headerHeight + headerMargin + tablesHeight + tableContainerMargin + baseFooterHeight);
 
-        // Adjust remaining space math
-        const maxNotesLinesHeight = remainingSpace + Math.max(0, legendHeight - emptyNotesBoxHeight);
-        const numLines = Math.max(0, Math.floor((maxNotesLinesHeight + 12) / 26));
+        // Calculate how many lines fit
+        const numLines = Math.max(0, Math.floor((remainingSpace + 12) / 26));
 
         newNotesLines[pageIdx] = numLines;
       }

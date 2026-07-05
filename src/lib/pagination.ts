@@ -80,12 +80,15 @@ export function paginateHabits({
   const page1HeaderHeight = 140;
   const miniHeaderHeight = 50;
 
-  // Estimate footer height
+  // Estimate footer height dynamically based on component dimensions
   let estimatedFooterHeight = 0;
   if (config.showNotesSection || config.showStatusLegend) {
-    estimatedFooterHeight += 30; // spacing/borders
-    if (config.showNotesSection) estimatedFooterHeight += 130; // notes container + header
-    if (config.showStatusLegend) estimatedFooterHeight += 60; // legend container + header
+    const notesBoxHeight = config.showNotesSection ? 130 : 0;
+    // Legend items are stacked in a single column.
+    // Each item is ~16px height + 6px gap = 22px. Title and spacing is ~30px.
+    const legendBoxHeight = config.showStatusLegend ? (30 + habits.length * 22) : 0;
+    
+    estimatedFooterHeight = 30 + Math.max(notesBoxHeight, legendBoxHeight);
   }
 
   if (habits.length === 0) {

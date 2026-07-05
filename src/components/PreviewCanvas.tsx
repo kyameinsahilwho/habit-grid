@@ -35,6 +35,11 @@ export function PreviewCanvas({
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
   const [notesLines, setNotesLines] = useState<Record<number, number>>({});
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Dynamic Scaling of pages in viewport
   useEffect(() => {
@@ -113,7 +118,7 @@ export function PreviewCanvas({
     });
 
     setNotesLines(newNotesLines);
-  }, [pages, habits, config]);
+  }, [pages, habits, config, isMounted]);
 
   // Expose triggerPDFExport to parent through a ref
   useEffect(() => {

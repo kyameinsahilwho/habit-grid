@@ -3,6 +3,7 @@ import { devtools } from '@tanstack/devtools-vite'
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import viteReact from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import { nitro } from 'nitro/vite'
 // @ts-ignore
 import handler from './api/generate-pdf.js'
 
@@ -11,6 +12,9 @@ const config = defineConfig({
   plugins: [
     devtools(),
     tailwindcss(),
+    nitro({
+      preset: 'vercel',
+    }),
     tanstackStart(),
     viteReact(),
     {

@@ -110,8 +110,8 @@ export function PreviewCanvas({
           contentHeight -
           (headerHeight + headerMargin + tablesHeight + tableContainerMargin + baseFooterHeight);
 
-        // Calculate how many lines fit
-        const numLines = Math.max(0, Math.floor((remainingSpace + 12) / 26));
+        // Calculate how many lines fit with a 10px safety buffer to prevent page leaks
+        const numLines = Math.max(0, Math.floor((remainingSpace - 10 + 12) / 26));
 
         newNotesLines[pageIdx] = numLines;
       }

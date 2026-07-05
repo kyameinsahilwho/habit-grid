@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TemplatesIndexRouteImport } from './routes/templates/index'
 import { Route as TemplatesSlugRouteImport } from './routes/templates/$slug'
+import { Route as ApiGeneratePdfRouteImport } from './routes/api/generate-pdf'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -28,33 +29,43 @@ const TemplatesSlugRoute = TemplatesSlugRouteImport.update({
   path: '/templates/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiGeneratePdfRoute = ApiGeneratePdfRouteImport.update({
+  id: '/api/generate-pdf',
+  path: '/api/generate-pdf',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/api/generate-pdf': typeof ApiGeneratePdfRoute
   '/templates/$slug': typeof TemplatesSlugRoute
   '/templates/': typeof TemplatesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/api/generate-pdf': typeof ApiGeneratePdfRoute
   '/templates/$slug': typeof TemplatesSlugRoute
   '/templates': typeof TemplatesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/api/generate-pdf': typeof ApiGeneratePdfRoute
   '/templates/$slug': typeof TemplatesSlugRoute
   '/templates/': typeof TemplatesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/templates/$slug' | '/templates/'
+  fullPaths: '/' | '/api/generate-pdf' | '/templates/$slug' | '/templates/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/templates/$slug' | '/templates'
-  id: '__root__' | '/' | '/templates/$slug' | '/templates/'
+  to: '/' | '/api/generate-pdf' | '/templates/$slug' | '/templates'
+  id:
+    '__root__' | '/' | '/api/generate-pdf' | '/templates/$slug' | '/templates/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ApiGeneratePdfRoute: typeof ApiGeneratePdfRoute
   TemplatesSlugRoute: typeof TemplatesSlugRoute
   TemplatesIndexRoute: typeof TemplatesIndexRoute
 }
@@ -82,11 +93,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TemplatesSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/generate-pdf': {
+      id: '/api/generate-pdf'
+      path: '/api/generate-pdf'
+      fullPath: '/api/generate-pdf'
+      preLoaderRoute: typeof ApiGeneratePdfRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ApiGeneratePdfRoute: ApiGeneratePdfRoute,
   TemplatesSlugRoute: TemplatesSlugRoute,
   TemplatesIndexRoute: TemplatesIndexRoute,
 }

@@ -181,10 +181,15 @@ export function PreviewCanvas({
         if (!response.ok) {
           let errorText = 'Unknown error';
           try {
-            const errData = await response.json();
-            errorText = errData.details || errData.error || errorText;
+            const rawText = await response.text();
+            try {
+              const errData = JSON.parse(rawText);
+              errorText = errData.details || errData.error || errorText;
+            } catch (_) {
+              errorText = rawText || errorText;
+            }
           } catch (_) {
-            errorText = await response.text();
+            // Fallback
           }
           throw new Error(`Failed to generate PDF: ${errorText}`);
         }

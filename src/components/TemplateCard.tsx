@@ -7,8 +7,11 @@ interface TemplateCardProps {
 }
 
 export function TemplateCard({ template }: TemplateCardProps) {
+  const isTape = template.slug.length % 2 === 0;
+
   return (
     <div className="tpl-card">
+      {isTape ? <div className="handdrawn-tape" /> : <div className="handdrawn-tack" />}
       <div>
         {/* Title + badge */}
         <div className="tpl-card-header">

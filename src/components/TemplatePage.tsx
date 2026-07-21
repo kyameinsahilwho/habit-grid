@@ -38,6 +38,7 @@ export function TemplatePage({ template }: TemplatePageProps) {
 
         {/* CTA box */}
         <div className="tpl-cta-box">
+          <div className="handdrawn-tape" style={{ width: '120px', height: '28px', top: '-14px' }} />
           <div>
             <p className="tpl-cta-label">Pre-Configured Template</p>
             <h2>Printable PDF Habit Chart</h2>

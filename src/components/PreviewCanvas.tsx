@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useLayoutEffect, useMemo } from 'react';
+import { useEffect, useRef, useState, useLayoutEffect, useMemo, Fragment } from 'react';
 import { LucideIcon } from './LucideIcon';
 import { getGridDates, getTimeframeSubtitleText, themeColorPresets } from '../lib/gridUtils';
 import { paginateHabits } from '../lib/pagination';
@@ -308,7 +308,7 @@ export function PreviewCanvas({
                               <tbody>
                                 {item.segments.map((segmentDates, segIndex) => {
                                   return (
-                                    <>
+                                    <Fragment key={segIndex}>
                                       <tr key={`h-${segIndex}`} className="header-row">
                                         {segIndex === 0 && (
                                           <td
@@ -385,7 +385,7 @@ export function PreviewCanvas({
                                           );
                                         })}
                                       </tr>
-                                    </>
+                                    </Fragment>
                                   );
                                 })}
                               </tbody>

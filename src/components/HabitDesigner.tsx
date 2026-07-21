@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
+import { Link } from '@tanstack/react-router';
 import { Sidebar } from './Sidebar';
 import { PreviewCanvas } from './PreviewCanvas';
 import { templates } from '../lib/templates';
 import { LucideIcon } from './LucideIcon';
+import { SiteLogoIcon } from './SiteLogoIcon';
 import { getGridDates } from '../lib/gridUtils';
 
 const STATE_LOCAL_STORAGE_KEY = 'habit_tracker_designer_state_v8';
@@ -189,6 +191,35 @@ export function HabitDesigner({ templateSlug }: HabitDesignerProps) {
   const checkedCount = checkedCells.size;
   const percentage = totalCells > 0 ? Math.round((checkedCount / totalCells) * 100) : 0;
 
+  // Sidebar width resizing state
+  const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('habit_tracker_sidebar_width') : null;
+    return saved ? parseInt(saved, 10) : 370;
+  });
+  const [isResizing, setIsResizing] = useState<boolean>(false);
+
+  const startResizing = (mouseDownEvent: React.MouseEvent) => {
+    mouseDownEvent.preventDefault();
+    setIsResizing(true);
+    const startX = mouseDownEvent.clientX;
+    const startWidth = sidebarWidth;
+
+    const onMouseMove = (mouseMoveEvent: MouseEvent) => {
+      const newWidth = Math.min(Math.max(startWidth + (mouseMoveEvent.clientX - startX), 260), 650);
+      setSidebarWidth(newWidth);
+      localStorage.setItem('habit_tracker_sidebar_width', String(newWidth));
+    };
+
+    const onMouseUp = () => {
+      setIsResizing(false);
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  };
+
   const handleExport = () => {
     if (exportPdfRef.current) {
       exportPdfRef.current();
@@ -196,8 +227,9 @@ export function HabitDesigner({ templateSlug }: HabitDesignerProps) {
   };
 
   return (
-    <div className="app-container">
+    <div className={`app-container${isResizing ? ' resizing-active' : ''}`}>
       <Sidebar
+        width={sidebarWidth}
         habits={habits}
         config={config}
         onChangeConfig={setConfig}
@@ -210,41 +242,32 @@ export function HabitDesigner({ templateSlug }: HabitDesignerProps) {
         isExporting={isExporting}
       />
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div
+        className={`sidebar-resizer${isResizing ? ' resizing' : ''}`}
+        onMouseDown={startResizing}
+        title="Drag to resize sidebar"
+      />
+
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', minWidth: 0 }}>
         <header className="preview-header">
-          <div className="preview-header-info">
-            <h2>Live Preview Studio</h2>
-            <p>
-              Completion progress: <strong>{percentage}%</strong>
-            </p>
+          <div className="preview-header-left">
+            <SiteLogoIcon size={26} className="preview-header-site-icon" />
+            <div className="preview-header-info">
+              <h2>Live Preview Studio</h2>
+              <p>
+                Completion: <strong>{percentage}%</strong>
+              </p>
+            </div>
           </div>
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-            <a
-              href="/templates"
-              style={{
-                textDecoration: 'none',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '8px 14px',
-                fontSize: '12px',
-                fontWeight: 500,
-                color: 'var(--text-primary)',
-                background: 'var(--card-bg)',
-                border: '1px solid var(--sidebar-border)',
-                borderRadius: '8px',
-                transition: 'all 0.2s',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = 'var(--accent)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = 'var(--sidebar-border)';
-              }}
+          <div className="preview-header-actions">
+            <Link
+              to="/templates"
+              className="browse-templates-btn"
+              style={{ textDecoration: 'none' }}
             >
-              <LucideIcon name="Grid" size={14} style={{ color: 'var(--accent)' }} />
-              Browse SEO Templates
-            </a>
+              <LucideIcon name="LayoutGrid" size={14} style={{ color: 'var(--accent)' }} />
+              Browse Templates
+            </Link>
           </div>
         </header>
 

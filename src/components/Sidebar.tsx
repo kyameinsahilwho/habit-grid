@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import Sortable from 'sortablejs';
 import { LucideIcon } from './LucideIcon';
 import { IconPicker } from './IconPicker';
+import { SiteLogoIcon } from './SiteLogoIcon';
 
 interface SidebarProps {
   habits: any[];
@@ -14,6 +15,7 @@ interface SidebarProps {
   onEditHabitIcon: (id: string, newIcon: string) => void;
   onExportPdf: () => void;
   isExporting: boolean;
+  width?: number;
 }
 
 export function Sidebar({
@@ -26,7 +28,8 @@ export function Sidebar({
   onEditHabitName,
   onEditHabitIcon,
   onExportPdf,
-  isExporting
+  isExporting,
+  width,
 }: SidebarProps) {
   const [newHabitName, setNewHabitName] = useState('');
   const [selectedIcon, setSelectedIcon] = useState('Droplet');
@@ -70,11 +73,14 @@ export function Sidebar({
   };
 
   return (
-    <aside className="sidebar">
+    <aside
+      className="sidebar"
+      style={width ? { width: `${width}px`, minWidth: `${width}px` } : undefined}
+    >
       <header className="sidebar-header">
         <div className="logo">
-          <LucideIcon name="CheckSquare" className="logo-icon-svg" style={{ width: '22px', height: '22px', color: 'var(--accent)', strokeWidth: '2.5px' }} />
-          <h1>HabitGrid</h1>
+          <SiteLogoIcon size={28} className="logo-svg-icon" />
+          <h1>Habit<span>Grid</span></h1>
         </div>
         <p className="tagline">Create print-ready beautiful habit sheets</p>
       </header>
@@ -82,7 +88,10 @@ export function Sidebar({
       <div className="sidebar-scroll">
         {/* 1. Habits & Questions Section */}
         <div className="settings-section">
-          <h2 className="section-title">1. Habits & Questions</h2>
+          <h2 className="section-title">
+            <LucideIcon name="ListChecks" size={13} className="section-title-icon" />
+            Habits & Questions
+          </h2>
           <div className="add-habit-form">
             <div className="input-group">
               <input
@@ -112,7 +121,7 @@ export function Sidebar({
               onClick={handleAddClick}
               disabled={!newHabitName.trim()}
             >
-              Add Item
+              <LucideIcon name="Plus" size={15} /> Add Item
             </button>
           </div>
 
@@ -182,7 +191,10 @@ export function Sidebar({
 
         {/* 2. Design & Typography Section */}
         <div className="settings-section">
-          <h2 className="section-title">2. Design & Typography</h2>
+          <h2 className="section-title">
+            <LucideIcon name="Palette" size={13} className="section-title-icon" />
+            Design & Typography
+          </h2>
 
           <div className="form-group">
             <label htmlFor="grid-title">Tracker Title</label>
@@ -410,7 +422,10 @@ export function Sidebar({
 
           {/* 3. Sheet Elements & Metadata */}
           <div className="settings-section" style={{ marginTop: '12px' }}>
-            <h2 className="section-title">3. Layout Details</h2>
+            <h2 className="section-title">
+              <LucideIcon name="LayoutTemplate" size={13} className="section-title-icon" />
+              Layout Details
+            </h2>
             <div className="checkbox-options">
               <label className="checkbox-container">
                 Include Start Date Box
@@ -466,7 +481,10 @@ export function Sidebar({
 
           {/* 4. Page Size & Orientation */}
           <div className="settings-section" style={{ marginTop: '12px' }}>
-            <h2 className="section-title">4. Printable Page Options</h2>
+            <h2 className="section-title">
+              <LucideIcon name="FileText" size={13} className="section-title-icon" />
+              Printable Page Options
+            </h2>
             <div className="form-row">
               <div className="form-group">
                 <label htmlFor="page-size">Page Size</label>
@@ -506,11 +524,12 @@ export function Sidebar({
         >
           {isExporting ? (
             <>
-              <span className="btn-icon">⏳</span> Generating PDF...
+              <LucideIcon name="Loader" size={16} style={{ animation: 'spin 1s linear infinite' }} />
+              Generating PDF...
             </>
           ) : (
             <>
-              <LucideIcon name="Download" size={16} /> Export to Printable PDF
+              <LucideIcon name="Download" size={16} /> Export to PDF
             </>
           )}
         </button>

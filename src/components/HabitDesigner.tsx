@@ -36,6 +36,9 @@ export function HabitDesigner({ templateSlug }: HabitDesignerProps) {
   const defaultEndRangeDate = formatDateStr(
     new Date(nextMonthDate.getFullYear(), nextMonthDate.getMonth() + 1, nextMonthDate.getDate())
   );
+  const defaultEndDaysDate = formatDateStr(
+    new Date(today.getFullYear(), today.getMonth(), today.getDate() + 30)
+  );
 
   const defaultConfig = {
     periodMode: 'days',
@@ -45,6 +48,9 @@ export function HabitDesigner({ templateSlug }: HabitDesignerProps) {
     weeksCount: 4,
     startDaysDate: defaultStartDate,
     daysCount: 75,
+    daysCalculationMode: 'count',
+    endDaysDate: defaultEndDaysDate,
+    includeToday: false,
     startRangeDate: defaultStartDate,
     endRangeDate: defaultEndRangeDate,
     gridTitle: 'Personal Habit Tracker',

@@ -24,6 +24,30 @@ export interface GridDate {
   weekGroup?: number;
 }
 
+export function parseLocalDate(dateStr: string): Date {
+  if (!dateStr) return new Date();
+  const [year, month, day] = dateStr.split('-').map(Number);
+  if (!year || !month || !day) return new Date(dateStr);
+  return new Date(year, month - 1, day);
+}
+
+export function formatDateStr(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+export function calculateDaysBetween(startDateStr: string, endDateStr: string): number {
+  const start = parseLocalDate(startDateStr);
+  const end = parseLocalDate(endDateStr);
+  start.setHours(0, 0, 0, 0);
+  end.setHours(0, 0, 0, 0);
+  if (end < start) return 1;
+  const diffTime = end.getTime() - start.getTime();
+  return Math.round(diffTime / (1000 * 60 * 60 * 24)) + 1;
+}
+
 export function getGridDates(config: any): GridDate[] {
   const dates: GridDate[] = [];
 
@@ -40,19 +64,19 @@ export function getGridDates(config: any): GridDate[] {
       });
     }
   } else if (config.periodMode === 'weeks') {
-    const startDate = new Date(config.startWeekDate);
+    const startDate = parseLocalDate(config.startWeekDate);
     const day = startDate.getDay();
     const diff = startDate.getDate() - day + (day === 0 ? -6 : 1);
     const startMonday = new Date(startDate.setDate(diff));
 
-    const totalDays = config.weeksCount * 7;
+    const totalDays = (config.weeksCount || 4) * 7;
     for (let d = 0; d < totalDays; d++) {
       const date = new Date(startMonday);
       date.setDate(startMonday.getDate() + d);
 
       const weekNumber = Math.floor(d / 7) + 1;
       dates.push({
-        dateString: date.toISOString().split('T')[0],
+        dateString: formatDateStr(date),
         dayNumber: date.getDate(),
         absoluteIndex: d + 1,
         weekdayLabel: WEEKDAY_NAMES[date.getDay()],
@@ -61,28 +85,11 @@ export function getGridDates(config: any): GridDate[] {
       });
     }
   } else if (config.periodMode === 'days') {
-    const start = new Date(config.startDaysDate);
-    const totalDays = parseInt(config.daysCount) || 30;
-    for (let d = 0; d < totalDays; d++) {
-      const date = new Date(start);
-      date.setDate(start.getDate() + d);
-      dates.push({
-        dateString: date.toISOString().split('T')[0],
-        dayNumber: date.getDate(),
-        absoluteIndex: d + 1,
-        weekdayLabel: WEEKDAY_NAMES[date.getDay()],
-        isWeekend: date.getDay() === 0 || date.getDay() === 6
-      });
-    }
-  } else if (config.periodMode === 'range') {
-    const start = new Date(config.startRangeDate);
-    const end = new Date(config.endRangeDate);
-    start.setHours(0, 0, 0, 0);
-    end.setHours(0, 0, 0, 0);
+    const start = parseLocalDate(config.startDaysDate);
+    let totalDays = parseInt(config.daysCount) || 30;
 
-    let totalDays = 1;
-    if (end >= start) {
-      totalDays = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    if (config.daysCalculationMode === 'endDate' && config.endDaysDate) {
+      totalDays = calculateDaysBetween(config.startDaysDate, config.endDaysDate);
     }
     totalDays = Math.min(150, Math.max(1, totalDays));
 
@@ -90,7 +97,23 @@ export function getGridDates(config: any): GridDate[] {
       const date = new Date(start);
       date.setDate(start.getDate() + d);
       dates.push({
-        dateString: date.toISOString().split('T')[0],
+        dateString: formatDateStr(date),
+        dayNumber: date.getDate(),
+        absoluteIndex: d + 1,
+        weekdayLabel: WEEKDAY_NAMES[date.getDay()],
+        isWeekend: date.getDay() === 0 || date.getDay() === 6
+      });
+    }
+  } else if (config.periodMode === 'range') {
+    const start = parseLocalDate(config.startRangeDate);
+    let totalDays = calculateDaysBetween(config.startRangeDate, config.endRangeDate);
+    totalDays = Math.min(150, Math.max(1, totalDays));
+
+    for (let d = 0; d < totalDays; d++) {
+      const date = new Date(start);
+      date.setDate(start.getDate() + d);
+      dates.push({
+        dateString: formatDateStr(date),
         dayNumber: date.getDate(),
         absoluteIndex: d + 1,
         weekdayLabel: WEEKDAY_NAMES[date.getDay()],
@@ -105,24 +128,30 @@ export function getTimeframeSubtitleText(config: any): string {
   if (config.periodMode === 'month') {
     return `${MONTH_NAMES[config.month]} ${config.year}`;
   } else if (config.periodMode === 'weeks') {
-    const start = new Date(config.startWeekDate);
+    const start = parseLocalDate(config.startWeekDate);
     const end = new Date(start);
-    end.setDate(start.getDate() + (config.weeksCount * 7) - 1);
+    end.setDate(start.getDate() + ((config.weeksCount || 4) * 7) - 1);
     const formatOptions: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' };
     return `${start.toLocaleDateString('en-US', formatOptions)} - ${end.toLocaleDateString('en-US', formatOptions)}`;
   } else if (config.periodMode === 'days') {
-    if ((config.gridTitle || '').toLowerCase().includes('75') && parseInt(config.daysCount) === 75) {
+    let totalDays = parseInt(config.daysCount) || 30;
+    if (config.daysCalculationMode === 'endDate' && config.endDaysDate) {
+      totalDays = calculateDaysBetween(config.startDaysDate, config.endDaysDate);
+    }
+    totalDays = Math.min(150, Math.max(1, totalDays));
+
+    if ((config.gridTitle || '').toLowerCase().includes('75') && totalDays === 75) {
       return 'Challenge Tracker';
     } else {
-      const start = new Date(config.startDaysDate);
+      const start = parseLocalDate(config.startDaysDate);
       const end = new Date(start);
-      end.setDate(start.getDate() + parseInt(config.daysCount) - 1);
+      end.setDate(start.getDate() + totalDays - 1);
       const formatOptions: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' };
       return `${start.toLocaleDateString('en-US', formatOptions)} - ${end.toLocaleDateString('en-US', formatOptions)}`;
     }
   } else if (config.periodMode === 'range') {
-    const start = new Date(config.startRangeDate);
-    const end = new Date(config.endRangeDate);
+    const start = parseLocalDate(config.startRangeDate);
+    const end = parseLocalDate(config.endRangeDate);
     const formatOptions: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' };
     if (end >= start) {
       return `${start.toLocaleDateString('en-US', formatOptions)} - ${end.toLocaleDateString('en-US', formatOptions)}`;

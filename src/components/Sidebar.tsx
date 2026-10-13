@@ -3,6 +3,7 @@ import Sortable from 'sortablejs';
 import { LucideIcon } from './LucideIcon';
 import { IconPicker } from './IconPicker';
 import { SiteLogoIcon } from './SiteLogoIcon';
+import { parseLocalDate, formatDateStr, calculateDaysBetween } from '../lib/gridUtils';
 
 interface SidebarProps {
   habits: any[];
@@ -329,45 +330,163 @@ export function Sidebar({
           )}
 
           {config.periodMode === 'days' && (
-            <div className="form-row" style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '8px', border: '1px solid var(--sidebar-border)' }}>
+            <div style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '8px', border: '1px solid var(--sidebar-border)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div className="form-group">
-                <label>Start Date</label>
-                <input
-                  type="date"
-                  value={config.startDaysDate}
-                  onChange={(e) => handleConfigChange('startDaysDate', e.target.value)}
-                />
+                <label htmlFor="days-calc-mode">Duration Method</label>
+                <select
+                  id="days-calc-mode"
+                  value={config.daysCalculationMode || 'count'}
+                  onChange={(e) => handleConfigChange('daysCalculationMode', e.target.value)}
+                >
+                  <option value="count">I know total days count</option>
+                  <option value="endDate">I know start & end date</option>
+                </select>
               </div>
-              <div className="form-group">
-                <label>Days</label>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Start Date</label>
+                  <input
+                    type="date"
+                    value={config.startDaysDate}
+                    onChange={(e) => {
+                      const newDate = e.target.value;
+                      const todayStr = formatDateStr(new Date());
+                      onChangeConfig({
+                        ...config,
+                        startDaysDate: newDate,
+                        includeToday: newDate === todayStr,
+                      });
+                    }}
+                  />
+                </div>
+
+                {(config.daysCalculationMode || 'count') === 'count' ? (
+                  <div className="form-group">
+                    <label>Total Days</label>
+                    <input
+                      type="number"
+                      value={config.daysCount}
+                      onChange={(e) => handleConfigChange('daysCount', parseInt(e.target.value) || 1)}
+                      min={1}
+                      max={150}
+                    />
+                  </div>
+                ) : (
+                  <div className="form-group">
+                    <label>End Date</label>
+                    <input
+                      type="date"
+                      value={config.endDaysDate || config.startDaysDate}
+                      onChange={(e) => handleConfigChange('endDaysDate', e.target.value)}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <label className="checkbox-container" style={{ margin: '4px 0 0 0', fontSize: '12px' }}>
+                Include Today ({formatDateStr(new Date())})
                 <input
-                  type="number"
-                  value={config.daysCount}
-                  onChange={(e) => handleConfigChange('daysCount', parseInt(e.target.value))}
-                  min={5}
-                  max={150}
+                  type="checkbox"
+                  checked={config.includeToday || config.startDaysDate === formatDateStr(new Date())}
+                  onChange={(e) => {
+                    const isChecked = e.target.checked;
+                    const todayStr = formatDateStr(new Date());
+                    if (isChecked) {
+                      onChangeConfig({
+                        ...config,
+                        includeToday: true,
+                        startDaysDate: todayStr,
+                      });
+                    } else {
+                      onChangeConfig({
+                        ...config,
+                        includeToday: false,
+                      });
+                    }
+                  }}
                 />
+                <span className="checkmark"></span>
+              </label>
+
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                {(config.daysCalculationMode || 'count') === 'count' ? (
+                  (() => {
+                    const start = parseLocalDate(config.startDaysDate);
+                    const days = parseInt(config.daysCount) || 1;
+                    const end = new Date(start);
+                    end.setDate(start.getDate() + days - 1);
+                    return `Calculated End Date: ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+                  })()
+                ) : (
+                  (() => {
+                    const days = calculateDaysBetween(config.startDaysDate, config.endDaysDate || config.startDaysDate);
+                    return `Calculated Duration: ${days} day${days === 1 ? '' : 's'}`;
+                  })()
+                )}
               </div>
             </div>
           )}
 
           {config.periodMode === 'range' && (
-            <div className="form-row" style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '8px', border: '1px solid var(--sidebar-border)' }}>
-              <div className="form-group">
-                <label>Start Date</label>
-                <input
-                  type="date"
-                  value={config.startRangeDate}
-                  onChange={(e) => handleConfigChange('startRangeDate', e.target.value)}
-                />
+            <div style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '8px', border: '1px solid var(--sidebar-border)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Start Date</label>
+                  <input
+                    type="date"
+                    value={config.startRangeDate}
+                    onChange={(e) => {
+                      const newDate = e.target.value;
+                      const todayStr = formatDateStr(new Date());
+                      onChangeConfig({
+                        ...config,
+                        startRangeDate: newDate,
+                        includeToday: newDate === todayStr,
+                      });
+                    }}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>End Date</label>
+                  <input
+                    type="date"
+                    value={config.endRangeDate}
+                    onChange={(e) => handleConfigChange('endRangeDate', e.target.value)}
+                  />
+                </div>
               </div>
-              <div className="form-group">
-                <label>End Date</label>
+
+              <label className="checkbox-container" style={{ margin: '4px 0 0 0', fontSize: '12px' }}>
+                Include Today ({formatDateStr(new Date())})
                 <input
-                  type="date"
-                  value={config.endRangeDate}
-                  onChange={(e) => handleConfigChange('endRangeDate', e.target.value)}
+                  type="checkbox"
+                  checked={config.includeToday || config.startRangeDate === formatDateStr(new Date())}
+                  onChange={(e) => {
+                    const isChecked = e.target.checked;
+                    const todayStr = formatDateStr(new Date());
+                    if (isChecked) {
+                      onChangeConfig({
+                        ...config,
+                        includeToday: true,
+                        startRangeDate: todayStr,
+                      });
+                    } else {
+                      onChangeConfig({
+                        ...config,
+                        includeToday: false,
+                      });
+                    }
+                  }}
                 />
+                <span className="checkmark"></span>
+              </label>
+
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                {(() => {
+                  const days = calculateDaysBetween(config.startRangeDate, config.endRangeDate);
+                  return `Calculated Duration: ${days} day${days === 1 ? '' : 's'}`;
+                })()}
               </div>
             </div>
           )}

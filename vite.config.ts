@@ -11,7 +11,13 @@ const config = defineConfig({
     devtools(),
     tailwindcss(),
     nitro({
-      preset: 'vercel',
+      preset: 'cloudflare_module',
+      cloudflare: {
+        // Merge ./wrangler.jsonc (name, Browser Rendering binding) into the
+        // generated deploy config.
+        deployConfig: true,
+        nodeCompat: true,
+      },
     }),
     tanstackStart(),
     viteReact(),

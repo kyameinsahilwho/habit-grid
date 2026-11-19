@@ -1,6 +1,27 @@
 import { createFileRoute } from '@tanstack/react-router';
-import chromium from '@sparticuz/chromium';
-import { chromium as playwright } from 'playwright-core';
+
+// On Cloudflare the PDF is rendered by Browser Rendering (the BROWSER binding
+// in wrangler.jsonc). In local development it uses the installed Chrome or Edge.
+async function launchBrowser() {
+  if (process.env.NODE_ENV === 'development') {
+    // Kept out of the Worker bundle: playwright-core only runs under Node.
+    const playwrightCore = 'playwright-core';
+    const { chromium: playwright } = await import(/* @vite-ignore */ playwrightCore);
+    for (const channel of ['chrome', 'msedge', undefined]) {
+      try {
+        return await playwright.launch({ headless: true, channel });
+      } catch (err) {
+        console.warn(`Failed to launch ${channel ?? 'default'} browser`, err);
+      }
+    }
+    throw new Error('No local browser available to render the PDF.');
+  }
+  // Nitro's Cloudflare runtime exposes the Worker bindings on globalThis.__env__.
+  const env = (globalThis as { __env__?: { BROWSER?: unknown } }).__env__;
+  if (!env?.BROWSER) throw new Error('Browser Rendering binding (BROWSER) is not configured.');
+  const { launch } = await import('@cloudflare/playwright');
+  return launch(env.BROWSER as Parameters<typeof launch>[0]);
+}
 
 export const Route = createFileRoute('/api/generate-pdf')({
   server: {
@@ -17,45 +38,7 @@ export const Route = createFileRoute('/api/generate-pdf')({
             });
           }
 
-          let browser = null;
-          const isLocal = process.env.NODE_ENV === 'development' || process.platform !== 'linux';
-
-          if (isLocal) {
-            try {
-              browser = await playwright.launch({
-                headless: true,
-                channel: 'chrome',
-              });
-            } catch (err) {
-              console.warn('Failed to launch Google Chrome, trying Microsoft Edge...', err);
-              try {
-                browser = await playwright.launch({
-                  headless: true,
-                  channel: 'msedge',
-                });
-              } catch (err2) {
-                console.warn('Failed to launch Microsoft Edge, trying default launch...', err2);
-                browser = await playwright.launch({
-                  headless: true,
-                });
-              }
-            }
-          } else {
-            try {
-              const execPath = await chromium.executablePath();
-              browser = await playwright.launch({
-                args: chromium.args,
-                executablePath: execPath,
-                headless: chromium.headless,
-              });
-            } catch (err) {
-              console.warn('Failed to launch @sparticuz/chromium, falling back to standard playwright launch...', err);
-              browser = await playwright.launch({
-                headless: true,
-              });
-            }
-          }
-
+          const browser = await launchBrowser();
           const context = await browser.newContext();
           const page = await context.newPage();
 
